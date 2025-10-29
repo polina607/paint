@@ -1,0 +1,21 @@
+﻿<Window x:Class="paint.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Mini Paint WPF" Height="600" Width="900" Background="#FFEEEEEE">
+    <DockPanel>
+        <!-- Верхняя панель инструментов -->
+        <ToolBar DockPanel.Dock="Top" Background="#FFF7F7F7">
+            <Button Name="BtnLine" Content="Линия" Click="BtnLine_Click" Margin="2"/>
+            <Button Name="BtnRectangle" Content="Прямоугольник" Click="BtnRectangle_Click" Margin="2"/>
+            <Button Name="BtnSquare" Content="Квадрат" Click="BtnSquare_Click" Margin="2"/>
+            <Button Name="BtnEllipse" Content="Эллипс" Click="BtnEllipse_Click" Margin="2"/>
+            <Button Name="BtnCircle" Content="Окружность" Click="BtnCircle_Click" Margin="2"/>
+        </ToolBar>
+
+        <!-- Холст для рисования -->
+        <Canvas Name="DrawCanvas" Background="White"
+                MouseDown="Canvas_MouseDown"
+                MouseMove="Canvas_MouseMove"
+                MouseUp="Canvas_MouseUp"/>
+    </DockPanel>
+</Window>
