@@ -3,17 +3,57 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Mini Paint WPF" Height="600" Width="900" Background="#FFEEEEEE">
     <DockPanel>
+
         <!-- Верхняя панель инструментов -->
-        <ToolBar DockPanel.Dock="Top" Background="#FFF7F7F7">
-            <Button Name="BtnLine" Content="Линия" Click="BtnLine_Click" Margin="2"/>
-            <Button Name="BtnRectangle" Content="Прямоугольник" Click="BtnRectangle_Click" Margin="2"/>
-            <Button Name="BtnSquare" Content="Квадрат" Click="BtnSquare_Click" Margin="2"/>
-            <Button Name="BtnEllipse" Content="Эллипс" Click="BtnEllipse_Click" Margin="2"/>
-            <Button Name="BtnCircle" Content="Окружность" Click="BtnCircle_Click" Margin="2"/>
-        </ToolBar>
+        <StackPanel Orientation="Horizontal"
+                    DockPanel.Dock="Top"
+                    Background="#EFEFEF"
+                    Height="40"
+                    VerticalAlignment="Top">
+
+            <!-- Меню фигур с выпадающим списком -->
+            <Menu VerticalAlignment="Center">
+                <MenuItem Header="Фигуры" Background="LightGray" Padding="8,2">
+                    <MenuItem Header="Линия" Click="ShapeMenuItem_Click" Tag="Line"/>
+                    <MenuItem Header="Прямоугольник" Click="ShapeMenuItem_Click" Tag="Rectangle"/>
+                    <MenuItem Header="Квадрат" Click="ShapeMenuItem_Click" Tag="Square"/>
+                    <Separator/>
+                    <MenuItem Header="Эллипс" Click="ShapeMenuItem_Click" Tag="Ellipse"/>
+                    <MenuItem Header="Окружность" Click="ShapeMenuItem_Click" Tag="Circle"/>
+                </MenuItem>
+            </Menu>
+
+            <!-- Кнопка текущей фигуры (для отображения выбранного инструмента) -->
+            <Button x:Name="CurrentShapeButton" 
+                    Content="Линия" 
+                    Margin="10,4,4,4" 
+                    Padding="8,2"
+                    Background="LightBlue"
+                    Click="CurrentShapeButton_Click"/>
+
+            <Separator Width="10" Margin="5,0"/>
+
+            <!-- Выбор цвета -->
+            <TextBlock Text="Цвет:" VerticalAlignment="Center" Margin="4,0"/>
+            <ComboBox Name="ColorBox" Width="110" Margin="4" SelectedIndex="0">
+                <ComboBoxItem Content="Черный" Tag="Black"/>
+                <ComboBoxItem Content="Красный" Tag="Red"/>
+                <ComboBoxItem Content="Зелёный" Tag="Green"/>
+                <ComboBoxItem Content="Синий" Tag="Blue"/>
+                <ComboBoxItem Content="Жёлтый" Tag="Yellow"/>
+                <ComboBoxItem Content="Фиолетовый" Tag="Purple"/>
+            </ComboBox>
+
+            <!-- Заливка -->
+            <CheckBox Name="FillCheck" Content="Заливка" Margin="8,0" VerticalAlignment="Center"/>
+
+            <!-- Очистка холста -->
+            <Button Content="Очистить" Click="ClearButton_Click" Margin="8,4" Padding="6,2"/>
+        </StackPanel>
 
         <!-- Холст для рисования -->
-        <Canvas Name="DrawCanvas" Background="White"
+        <Canvas Name="DrawCanvas"
+                Background="White"
                 MouseDown="Canvas_MouseDown"
                 MouseMove="Canvas_MouseMove"
                 MouseUp="Canvas_MouseUp"/>

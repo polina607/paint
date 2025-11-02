@@ -26,16 +26,75 @@ namespace paint
         public MainWindow()
         {
             InitializeComponent();
+            UpdateCurrentShapeButton();
         }
 
-        // ====== Выбор инструмента ======
-        private void BtnLine_Click(object sender, RoutedEventArgs e) => _currentTool = Tool.Line;
-        private void BtnRectangle_Click(object sender, RoutedEventArgs e) => _currentTool = Tool.Rectangle;
-        private void BtnSquare_Click(object sender, RoutedEventArgs e) => _currentTool = Tool.Square;
-        private void BtnEllipse_Click(object sender, RoutedEventArgs e) => _currentTool = Tool.Ellipse;
-        private void BtnCircle_Click(object sender, RoutedEventArgs e) => _currentTool = Tool.Circle;
+        // Обновляем текст кнопки текущей фигуры
+        private void UpdateCurrentShapeButton()
+        {
+            CurrentShapeButton.Content = _currentTool switch
+            {
+                Tool.Line => "Линия",
+                Tool.Rectangle => "Прямоугольник",
+                Tool.Square => "Квадрат",
+                Tool.Ellipse => "Эллипс",
+                Tool.Circle => "Окружность",
+                _ => "Фигура"
+            };
+        }
 
-        // ====== Рисование ======
+        // Обработчик для всех пунктов меню фигур
+        private void ShapeMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is MenuItem menuItem && menuItem.Tag is string toolTag)
+            {
+                _currentTool = toolTag switch
+                {
+                    "Line" => Tool.Line,
+                    "Rectangle" => Tool.Rectangle,
+                    "Square" => Tool.Square,
+                    "Ellipse" => Tool.Ellipse,
+                    "Circle" => Tool.Circle,
+                    _ => Tool.Line
+                };
+                UpdateCurrentShapeButton();
+            }
+        }
+
+        // Клик по кнопке текущей фигуры - открывает меню
+        private void CurrentShapeButton_Click(object sender, RoutedEventArgs e)
+        {
+            // Находим меню и открываем его
+            var menu = FindVisualParent<Menu>(CurrentShapeButton);
+            if (menu != null && menu.Items.Count > 0)
+            {
+                if (menu.Items[0] is MenuItem menuItem)
+                {
+                    menuItem.IsSubmenuOpen = true;
+                }
+            }
+        }
+
+        // Очистка холста
+        private void ClearButton_Click(object sender, RoutedEventArgs e)
+        {
+            DrawCanvas.Children.Clear();
+        }
+
+        // Вспомогательный метод для поиска родительского элемента
+        private static T? FindVisualParent<T>(DependencyObject child) where T : DependencyObject
+        {
+            while (child != null)
+            {
+                if (child is T parent)
+                    return parent;
+
+                child = VisualTreeHelper.GetParent(child);
+            }
+            return null;
+        }
+
+        // ---------- начало рисования ----------
         private void Canvas_MouseDown(object sender, MouseButtonEventArgs e)
         {
             _startPoint = e.GetPosition(DrawCanvas);
@@ -44,13 +103,21 @@ namespace paint
             _previewShape = CreateShape(_currentTool);
             if (_previewShape != null)
             {
-                _previewShape.Stroke = Brushes.Black;
+                _previewShape.Stroke = GetSelectedBrush();
                 _previewShape.StrokeThickness = 2;
-                _previewShape.StrokeDashArray = new DoubleCollection { 2, 2 }; // пунктир для предпросмотра
+                _previewShape.StrokeDashArray = new DoubleCollection { 2, 2 };
+
+                if (FillCheck.IsChecked == true && _currentTool != Tool.Line)
+                {
+                    _previewShape.Fill = GetSelectedBrush();
+                    _previewShape.Opacity = 0.7;
+                }
+
                 DrawCanvas.Children.Add(_previewShape);
             }
         }
 
+        // ---------- перетаскивание мыши ----------
         private void Canvas_MouseMove(object sender, MouseEventArgs e)
         {
             if (!_isDrawing || _previewShape == null) return;
@@ -59,18 +126,27 @@ namespace paint
             UpdateShapeGeometry(_previewShape, _startPoint, current, _currentTool);
         }
 
+        // ---------- отпустили мышь ----------
         private void Canvas_MouseUp(object sender, MouseButtonEventArgs e)
         {
             if (!_isDrawing || _previewShape == null) return;
 
             _isDrawing = false;
             Point end = e.GetPosition(DrawCanvas);
-            _previewShape.StrokeDashArray = null; // сделать линию обычной
+
+            _previewShape.StrokeDashArray = null;
+
+            if (FillCheck.IsChecked == true && _currentTool != Tool.Line)
+            {
+                _previewShape.Fill = GetSelectedBrush();
+                _previewShape.Opacity = 1;
+            }
+
             UpdateShapeGeometry(_previewShape, _startPoint, end, _currentTool);
             _previewShape = null;
         }
 
-        // ====== Создание фигуры ======
+        // ---------- создаём фигуру по типу ----------
         private Shape? CreateShape(Tool tool)
         {
             return tool switch
@@ -84,7 +160,7 @@ namespace paint
             };
         }
 
-        // ====== Обновление координат фигуры ======
+        // ---------- обновляем размеры и позицию фигуры ----------
         private void UpdateShapeGeometry(Shape shape, Point start, Point end, Tool tool)
         {
             double x = Math.Min(start.X, end.X);
@@ -121,6 +197,25 @@ namespace paint
                     shape.Height = side;
                     break;
             }
+        }
+
+        // ---------- получаем кисть из ComboBox ----------
+        private Brush GetSelectedBrush()
+        {
+            if (ColorBox.SelectedItem is not ComboBoxItem item)
+                return Brushes.Black;
+
+            string? colorName = item.Tag as string;
+
+            return colorName switch
+            {
+                "Red" => Brushes.Red,
+                "Green" => Brushes.Green,
+                "Blue" => Brushes.Blue,
+                "Yellow" => Brushes.Yellow,
+                "Purple" => Brushes.Purple,
+                _ => Brushes.Black
+            };
         }
     }
 }
