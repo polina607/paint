@@ -1,7 +1,8 @@
 ﻿<Window x:Class="paint.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Mini Paint WPF" Height="600" Width="900" Background="#FFEEEEEE">
+        Title="Vector Paint Editor" Height="600" Width="900" Background="#FFEEEEEE"
+        Loaded="Window_Loaded">
     <DockPanel>
 
         <!-- Верхняя панель инструментов -->
@@ -11,31 +12,30 @@
                     Height="40"
                     VerticalAlignment="Top">
 
-            <!-- Меню фигур с выпадающим списком -->
-            <Menu VerticalAlignment="Center">
-                <MenuItem Header="Фигуры" Background="LightGray" Padding="8,2">
-                    <MenuItem Header="Линия" Click="ShapeMenuItem_Click" Tag="Line"/>
-                    <MenuItem Header="Прямоугольник" Click="ShapeMenuItem_Click" Tag="Rectangle"/>
-                    <MenuItem Header="Квадрат" Click="ShapeMenuItem_Click" Tag="Square"/>
-                    <Separator/>
-                    <MenuItem Header="Эллипс" Click="ShapeMenuItem_Click" Tag="Ellipse"/>
-                    <MenuItem Header="Окружность" Click="ShapeMenuItem_Click" Tag="Circle"/>
-                </MenuItem>
-            </Menu>
-
-            <!-- Кнопка текущей фигуры (для отображения выбранного инструмента) -->
-            <Button x:Name="CurrentShapeButton" 
-                    Content="Линия" 
-                    Margin="10,4,4,4" 
-                    Padding="8,2"
-                    Background="LightBlue"
-                    Click="CurrentShapeButton_Click"/>
+            <!-- Выбор фигуры через ComboBox -->
+            <TextBlock Text="Фигура:" VerticalAlignment="Center" Margin="10,0,4,0"/>
+            <ComboBox Name="ShapeBox" 
+                     Width="130" 
+                     Margin="4" 
+                     SelectedIndex="0"
+                     SelectionChanged="ShapeBox_SelectionChanged">
+                <ComboBoxItem Content="Линия" Tag="Line"/>
+                <ComboBoxItem Content="Прямоугольник" Tag="Rectangle"/>
+                <ComboBoxItem Content="Квадрат" Tag="Square"/>
+                <ComboBoxItem Content="Эллипс" Tag="Ellipse"/>
+                <ComboBoxItem Content="Окружность" Tag="Circle"/>
+                <ComboBoxItem Content="Многоугольник" Tag="Polygon"/>
+            </ComboBox>
 
             <Separator Width="10" Margin="5,0"/>
 
-            <!-- Выбор цвета -->
-            <TextBlock Text="Цвет:" VerticalAlignment="Center" Margin="4,0"/>
-            <ComboBox Name="ColorBox" Width="110" Margin="4" SelectedIndex="0">
+            <!-- Выбор цвета контура -->
+            <TextBlock Text="Контур:" VerticalAlignment="Center" Margin="4,0"/>
+            <ComboBox Name="StrokeColorBox" 
+                     Width="100" 
+                     Margin="4" 
+                     SelectedIndex="0" 
+                     SelectionChanged="StrokeColorBox_SelectionChanged">
                 <ComboBoxItem Content="Черный" Tag="Black"/>
                 <ComboBoxItem Content="Красный" Tag="Red"/>
                 <ComboBoxItem Content="Зелёный" Tag="Green"/>
@@ -44,8 +44,25 @@
                 <ComboBoxItem Content="Фиолетовый" Tag="Purple"/>
             </ComboBox>
 
-            <!-- Заливка -->
-            <CheckBox Name="FillCheck" Content="Заливка" Margin="8,0" VerticalAlignment="Center"/>
+            <Separator Width="10" Margin="5,0"/>
+
+            <!-- Выбор цвета заливки -->
+            <TextBlock Text="Заливка:" VerticalAlignment="Center" Margin="4,0"/>
+            <ComboBox Name="FillColorBox" 
+                     Width="100" 
+                     Margin="4" 
+                     SelectedIndex="1" 
+                     SelectionChanged="FillColorBox_SelectionChanged">
+                <ComboBoxItem Content="Нет" Tag="Transparent"/>
+                <ComboBoxItem Content="Красный" Tag="Red"/>
+                <ComboBoxItem Content="Зелёный" Tag="Green"/>
+                <ComboBoxItem Content="Синий" Tag="Blue"/>
+                <ComboBoxItem Content="Жёлтый" Tag="Yellow"/>
+                <ComboBoxItem Content="Фиолетовый" Tag="Purple"/>
+                <ComboBoxItem Content="Черный" Tag="Black"/>
+            </ComboBox>
+
+            <Separator Width="10" Margin="5,0"/>
 
             <!-- Очистка холста -->
             <Button Content="Очистить" Click="ClearButton_Click" Margin="8,4" Padding="6,2"/>
