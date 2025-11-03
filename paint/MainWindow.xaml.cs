@@ -77,6 +77,8 @@ namespace paint
                 };
 
                 _currentMode = EditorMode.Draw;
+                UpdateEditModeButton(); 
+
                 _shapeManager?.ClearSelection();
 
                 if (_currentShape != ShapeType.Polygon)
@@ -143,13 +145,16 @@ namespace paint
             }
         }
 
-        // Кнопки управления
         private void ClearButton_Click(object sender, RoutedEventArgs e)
         {
             if (DrawCanvas != null)
                 DrawCanvas.Children.Clear();
+
             ResetPolygon();
-            _shapeManager?.ClearSelection();
+
+            // ПЕРЕИНИЦИАЛИЗИРУЕМ ShapeManager после очистки
+            _shapeManager = new ShapeManager(DrawCanvas);
+
             UpdateStatusBar();
         }
 
