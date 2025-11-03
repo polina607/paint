@@ -3,15 +3,9 @@ using System.Windows.Media;
 
 namespace paint
 {
-    /// Фабрика для создания фигур с применением свойств
-
+    // Фабрика для создания фигур
     public static class ShapeFactory
     {
-
-        // Создает фигуру указанного типа
-
-        /// <param name="type">Тип фигуры</param>
-        
         public static Shape CreateShape(ShapeType type)
         {
             return type switch
@@ -26,10 +20,6 @@ namespace paint
             };
         }
 
-        /// Применяет свойства к фигуре
-
-        /// <param name="shape">Фигура</param>
-        /// <param name="properties">Свойства</param>
         public static void ApplyProperties(Shape shape, ShapeProperties properties)
         {
             if (shape == null || properties == null)
@@ -38,7 +28,6 @@ namespace paint
             shape.Stroke = properties.Stroke;
             shape.StrokeThickness = properties.StrokeThickness;
 
-            // Для линий заливка не применяется
             if (properties.HasFill && !(shape is Line))
             {
                 shape.Fill = properties.Fill;

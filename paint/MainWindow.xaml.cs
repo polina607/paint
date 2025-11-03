@@ -5,7 +5,6 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using System.Collections.Generic;
-using System.Windows.Threading;
 
 namespace paint
 {
@@ -22,16 +21,32 @@ namespace paint
         private List<Point> _polygonPoints = new List<Point>();
         private Polyline? _polygonPreview;
 
-        // Для определения двойного клика
+        // Для двойного клика
         private DateTime _lastClickTime = DateTime.MinValue;
         private Point _lastClickPoint;
+
+        // Менеджеры
+        private ShapeManager? _shapeManager;
+        private ZoomManager? _zoomManager;
+
+        // Режимы работы
+        private EditorMode _currentMode = EditorMode.Draw;
 
         public MainWindow()
         {
             InitializeComponent();
         }
 
-        // Обновляем свойства из UI элементов
+        private void Window_Loaded(object sender, RoutedEventArgs e)
+        {
+            UpdatePropertiesFromUI();
+            _shapeManager = new ShapeManager(DrawCanvas);
+            _zoomManager = new ZoomManager(MainScrollViewer, DrawCanvas);
+            UpdateStatusBar();
+            UpdateZoomDisplay();
+        }
+
+        // Обновляем свойства из UI
         private void UpdatePropertiesFromUI()
         {
             if (_currentProperties == null)
@@ -42,8 +57,6 @@ namespace paint
 
             _currentProperties.Stroke = GetSelectedStrokeBrush();
             _currentProperties.Fill = GetSelectedFillBrush();
-
-            // Автоматически определяем, есть ли заливка
             _currentProperties.HasFill = (FillColorBox.SelectedItem as ComboBoxItem)?.Tag as string != "Transparent";
         }
 
@@ -63,24 +76,114 @@ namespace paint
                     _ => ShapeType.Line
                 };
 
-                // Сбрасываем состояние многоугольника при переключении инструмента
+                _currentMode = EditorMode.Draw;
+                _shapeManager?.ClearSelection();
+
                 if (_currentShape != ShapeType.Polygon)
                 {
                     ResetPolygon();
                 }
+
+                UpdateStatusBar();
             }
         }
 
-        // Обработчик выбора цвета контура
+        // Обработчики цветов
         private void StrokeColorBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             UpdatePropertiesFromUI();
+            UpdateSelectedShapeProperties();
         }
 
-        // Обработчик выбора цвета заливки
         private void FillColorBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             UpdatePropertiesFromUI();
+            UpdateSelectedShapeProperties();
+        }
+
+        // Обновление свойств выделенной фигуры
+        private void UpdateSelectedShapeProperties()
+        {
+            if (_shapeManager?.SelectedShape != null)
+            {
+                ShapeFactory.ApplyProperties(_shapeManager.SelectedShape, _currentProperties);
+            }
+        }
+
+        // Обработчики масштабирования
+        private void ZoomInButton_Click(object sender, RoutedEventArgs e)
+        {
+            _zoomManager?.ZoomIn();
+            UpdateZoomDisplay();
+        }
+
+        private void ZoomOutButton_Click(object sender, RoutedEventArgs e)
+        {
+            _zoomManager?.ZoomOut();
+            UpdateZoomDisplay();
+        }
+
+        private void ZoomResetButton_Click(object sender, RoutedEventArgs e)
+        {
+            _zoomManager?.ZoomReset();
+            UpdateZoomDisplay();
+        }
+
+        private void ScrollViewer_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
+        {
+            _zoomManager?.HandleMouseWheel(e);
+            UpdateZoomDisplay();
+        }
+
+        private void UpdateZoomDisplay()
+        {
+            if (_zoomManager != null)
+            {
+                ZoomTextBlock.Text = _zoomManager.GetZoomText();
+            }
+        }
+
+        // Кнопки управления
+        private void ClearButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (DrawCanvas != null)
+                DrawCanvas.Children.Clear();
+            ResetPolygon();
+            _shapeManager?.ClearSelection();
+            UpdateStatusBar();
+        }
+
+        private void DeleteButton_Click(object sender, RoutedEventArgs e)
+        {
+            _shapeManager?.DeleteSelectedShape();
+            UpdateStatusBar();
+        }
+
+        private void EditModeButton_Click(object sender, RoutedEventArgs e)
+        {
+            _currentMode = _currentMode == EditorMode.Draw ? EditorMode.Edit : EditorMode.Draw;
+            _shapeManager?.ClearSelection();
+            UpdateStatusBar();
+            UpdateEditModeButton();
+        }
+
+        private void UpdateEditModeButton()
+        {
+            if (EditModeButton != null)
+            {
+                if (_currentMode == EditorMode.Edit)
+                {
+                    EditModeButton.Content = "🎯 Рисовать";
+                    EditModeButton.Background = Brushes.LightBlue;
+                    EditModeButton.ToolTip = "Переключиться в режим рисования";
+                }
+                else
+                {
+                    EditModeButton.Content = "✏️ Редакт.";
+                    EditModeButton.Background = Brushes.LightGreen;
+                    EditModeButton.ToolTip = "Переключиться в режим редактирования";
+                }
+            }
         }
 
         // Сброс состояния многоугольника
@@ -95,84 +198,98 @@ namespace paint
             }
         }
 
-        // Очистка холста
-        private void ClearButton_Click(object sender, RoutedEventArgs e)
-        {
-            if (DrawCanvas != null)
-                DrawCanvas.Children.Clear();
-            ResetPolygon();
-        }
-
-        // Начало рисования 
+        // Обработка мыши
         private void Canvas_MouseDown(object sender, MouseButtonEventArgs e)
         {
-            if (DrawCanvas == null) return;
+            if (DrawCanvas == null || _shapeManager == null) return;
 
             Point currentPoint = e.GetPosition(DrawCanvas);
 
-            // Проверяем двойной клик для многоугольника
-            if (_currentShape == ShapeType.Polygon && e.ChangedButton == MouseButton.Left)
+            if (_currentMode == EditorMode.Edit)
             {
-                TimeSpan timeSinceLastClick = DateTime.Now - _lastClickTime;
-                double distance = Point.Subtract(_lastClickPoint, currentPoint).Length;
-
-                // Если время между кликами мало и точки близко - это двойной клик
-                if (timeSinceLastClick.TotalMilliseconds < 500 && distance < 10)
-                {
-                    if (_polygonState == PolygonState.Drawing)
-                    {
-                        CompletePolygon();
-                        e.Handled = true;
-                        return;
-                    }
-                }
-
-                _lastClickTime = DateTime.Now;
-                _lastClickPoint = currentPoint;
+                HandleEditModeMouseDown(currentPoint, e.ChangedButton);
             }
-
-            if (_currentShape == ShapeType.Polygon)
+            else if (_currentShape == ShapeType.Polygon)
             {
                 HandlePolygonMouseDown(currentPoint, e.ChangedButton);
             }
             else
             {
-                HandleRegularShapeMouseDown(currentPoint);
+                HandleDrawModeMouseDown(currentPoint, e);
             }
         }
 
-        // Обработка мыши для обычных фигур
-        private void HandleRegularShapeMouseDown(Point currentPoint)
+        // Режим редактирования
+        private void HandleEditModeMouseDown(Point currentPoint, MouseButton button)
         {
-            UpdatePropertiesFromUI();
-
-            _startPoint = currentPoint;
-            _isDrawing = true;
-
-            _previewShape = CreateShape(_currentShape);
-            if (_previewShape != null)
+            if (button == MouseButton.Left)
             {
-                ShapeFactory.ApplyProperties(_previewShape, _currentProperties);
-                _previewShape.StrokeDashArray = new DoubleCollection { 2, 2 };
-                _previewShape.Opacity = 0.7;
-                DrawCanvas.Children.Add(_previewShape);
+                if (_shapeManager != null)
+                {
+                    var resizeHandle = _shapeManager.GetResizeHandleAtPoint(currentPoint);
+
+                    if (resizeHandle.HasValue)
+                    {
+                        _shapeManager.StartResize(resizeHandle.Value, currentPoint);
+                        UpdateStatusBar();
+                        return;
+                    }
+
+                    var shape = _shapeManager.GetShapeAtPoint(currentPoint);
+                    if (shape != null)
+                    {
+                        _shapeManager.SelectShape(shape);
+                        _shapeManager.StartDrag(currentPoint);
+                    }
+                    else
+                    {
+                        _shapeManager.ClearSelection();
+                    }
+                    UpdateStatusBar();
+                }
             }
         }
 
-        // Обработка мыши для многоугольника
+        // Режим рисования (обычные фигуры)
+        private void HandleDrawModeMouseDown(Point currentPoint, MouseButtonEventArgs e)
+        {
+            // Для многоугольника - отдельная обработка
+            if (_currentShape == ShapeType.Polygon)
+            {
+                HandlePolygonMouseDown(currentPoint, e.ChangedButton);
+                return;
+            }
+
+            // Для обычных фигур
+            if (e.ChangedButton == MouseButton.Left)
+            {
+                UpdatePropertiesFromUI();
+                _startPoint = currentPoint;
+                _isDrawing = true;
+
+                _previewShape = CreateShape(_currentShape);
+                if (_previewShape != null)
+                {
+                    ShapeFactory.ApplyProperties(_previewShape, _currentProperties);
+                    _previewShape.StrokeDashArray = new DoubleCollection { 2, 2 };
+                    _previewShape.Opacity = 0.7;
+                    DrawCanvas.Children.Add(_previewShape);
+                }
+            }
+        }
+
+        // Многоугольник
         private void HandlePolygonMouseDown(Point currentPoint, MouseButton button)
         {
             if (button == MouseButton.Left)
             {
-                // Левый клик - добавление точки
                 if (_polygonState == PolygonState.NotStarted)
                 {
-                    // Начало нового многоугольника
+                    // Начало рисования многоугольника
                     _polygonPoints.Clear();
                     _polygonPoints.Add(currentPoint);
                     _polygonState = PolygonState.Drawing;
 
-                    // Создаем превью
                     _polygonPreview = new Polyline();
                     ShapeFactory.ApplyProperties(_polygonPreview, _currentProperties);
                     _polygonPreview.StrokeDashArray = new DoubleCollection { 2, 2 };
@@ -181,52 +298,57 @@ namespace paint
                 }
                 else if (_polygonState == PolygonState.Drawing)
                 {
+                    // Проверка двойного клика для завершения
+                    TimeSpan timeSinceLastClick = DateTime.Now - _lastClickTime;
+                    double distance = Point.Subtract(_lastClickPoint, currentPoint).Length;
+
+                    if (timeSinceLastClick.TotalMilliseconds < 500 && distance < 10 && _polygonPoints.Count >= 2)
+                    {
+                        // Двойной клик - завершаем многоугольник
+                        CompletePolygon();
+                        return;
+                    }
+
                     // Добавляем новую точку
                     _polygonPoints.Add(currentPoint);
                     if (_polygonPreview != null)
                     {
                         _polygonPreview.Points = new PointCollection(_polygonPoints);
                     }
+
+                    _lastClickTime = DateTime.Now;
+                    _lastClickPoint = currentPoint;
                 }
             }
             else if (button == MouseButton.Right && _polygonState == PolygonState.Drawing)
             {
-                // Правый клик - завершение многоугольника
+                // Правый клик - завершаем многоугольник
                 CompletePolygon();
             }
         }
 
-        // Завершение многоугольника
-        private void CompletePolygon()
-        {
-            if (_polygonPoints.Count >= 3)
-            {
-                // Создаем финальный многоугольник
-                Polygon finalPolygon = new Polygon();
-                ShapeFactory.ApplyProperties(finalPolygon, _currentProperties);
-                finalPolygon.Points = new PointCollection(_polygonPoints);
-
-                // Убираем превью и добавляем финальную фигуру
-                if (_polygonPreview != null)
-                {
-                    DrawCanvas.Children.Remove(_polygonPreview);
-                }
-                DrawCanvas.Children.Add(finalPolygon);
-            }
-
-            ResetPolygon();
-        }
-
-        // Перетаскивание мыши
         private void Canvas_MouseMove(object sender, MouseEventArgs e)
         {
-            if (DrawCanvas == null) return;
+            if (DrawCanvas == null || _shapeManager == null) return;
 
             Point current = e.GetPosition(DrawCanvas);
 
-            if (_currentShape == ShapeType.Polygon && _polygonState == PolygonState.Drawing)
+            // Обновляем координаты
+            CoordinatesText.Text = $"X: {(int)current.X}, Y: {(int)current.Y}";
+
+            if (_currentMode == EditorMode.Edit)
             {
-                // Для многоугольника - обновляем превью с текущей позицией мыши
+                if (_shapeManager.IsDragging)
+                {
+                    _shapeManager.UpdateDrag(current);
+                }
+                else if (_shapeManager.IsResizing)
+                {
+                    _shapeManager.UpdateResize(current);
+                }
+            }
+            else if (_currentShape == ShapeType.Polygon && _polygonState == PolygonState.Drawing)
+            {
                 if (_polygonPreview != null && _polygonPoints.Count > 0)
                 {
                     var previewPoints = new List<Point>(_polygonPoints) { current };
@@ -235,15 +357,26 @@ namespace paint
             }
             else if (_isDrawing && _previewShape != null)
             {
-                // Для обычных фигур
                 UpdateShapeGeometry(_previewShape, _startPoint, current, _currentShape);
             }
         }
 
-        // Отпустили мышь
         private void Canvas_MouseUp(object sender, MouseButtonEventArgs e)
         {
-            if (_currentShape != ShapeType.Polygon && _isDrawing && _previewShape != null)
+            if (_shapeManager == null) return;
+
+            if (_currentMode == EditorMode.Edit)
+            {
+                if (_shapeManager.IsDragging)
+                {
+                    _shapeManager.EndDrag();
+                }
+                else if (_shapeManager.IsResizing)
+                {
+                    _shapeManager.EndResize();
+                }
+            }
+            else if (_currentShape != ShapeType.Polygon && _isDrawing && _previewShape != null)
             {
                 _isDrawing = false;
                 Point end = e.GetPosition(DrawCanvas);
@@ -252,17 +385,53 @@ namespace paint
                 _previewShape.Opacity = 1;
 
                 UpdateShapeGeometry(_previewShape, _startPoint, end, _currentShape);
+
+                // Добавляем фигуру в менеджер
+                _shapeManager.AddShape(_previewShape);
+
                 _previewShape = null;
+                UpdateStatusBar();
             }
         }
 
-        // Создаём фигуру по типу
+        // Завершение многоугольника
+        private void CompletePolygon()
+        {
+            if (_polygonPoints.Count >= 3)
+            {
+                Polygon finalPolygon = new Polygon();
+                ShapeFactory.ApplyProperties(finalPolygon, _currentProperties);
+                finalPolygon.Points = new PointCollection(_polygonPoints);
+
+                if (_polygonPreview != null)
+                {
+                    DrawCanvas.Children.Remove(_polygonPreview);
+                    _polygonPreview = null;
+                }
+
+                DrawCanvas.Children.Add(finalPolygon);
+
+                // Добавляем фигуру в менеджер
+                _shapeManager?.AddShape(finalPolygon);
+
+                UpdateStatusBar();
+            }
+            else
+            {
+                // Если точек недостаточно, просто сбрасываем
+                System.Diagnostics.Debug.WriteLine("Недостаточно точек для многоугольника (нужно минимум 3)");
+            }
+
+            ResetPolygon();
+        }
+
+        // Создание фигуры
         private Shape? CreateShape(ShapeType tool)
         {
             return ShapeFactory.CreateShape(tool);
         }
 
-        // Обновляем размеры и позицию фигуры
+        // Обновление геометрии фигуры
         private void UpdateShapeGeometry(Shape shape, Point start, Point end, ShapeType shapeType)
         {
             if (shape == null) return;
@@ -283,7 +452,6 @@ namespace paint
                         line.Y2 = end.Y;
                     }
                     break;
-
                 case ShapeType.Rectangle:
                 case ShapeType.Ellipse:
                     Canvas.SetLeft(shape, x);
@@ -291,7 +459,6 @@ namespace paint
                     shape.Width = w;
                     shape.Height = h;
                     break;
-
                 case ShapeType.Square:
                 case ShapeType.Circle:
                     double side = Math.Max(w, h);
@@ -303,7 +470,7 @@ namespace paint
             }
         }
 
-        // Получаем кисть для контура
+        // Получение кистей
         private Brush GetSelectedStrokeBrush()
         {
             if (StrokeColorBox?.SelectedItem is not ComboBoxItem item)
@@ -322,7 +489,6 @@ namespace paint
             };
         }
 
-        // Получаем кисть для заливки
         private Brush GetSelectedFillBrush()
         {
             if (FillColorBox?.SelectedItem is not ComboBoxItem item)
@@ -342,10 +508,18 @@ namespace paint
             };
         }
 
-        // Обработчик загрузки окна
-        private void Window_Loaded(object sender, RoutedEventArgs e)
+        // Обновление статусной строки
+        private void UpdateStatusBar()
         {
-            UpdatePropertiesFromUI();
+            string modeText = _currentMode == EditorMode.Draw ? "Режим рисования" : "Режим редактирования";
+            string shapeText = _currentMode == EditorMode.Draw ? $" | Фигура: {_currentShape}" : "";
+            string selectionText = _shapeManager?.SelectedShape != null ? " | Фигура выделена" : string.Empty;
+            string zoomText = _zoomManager != null ? $" | Масштаб: {_zoomManager.GetZoomText()}" : string.Empty;
+
+            if (StatusText != null)
+            {
+                StatusText.Text = $"{modeText}{shapeText}{selectionText}{zoomText}";
+            }
         }
     }
 }

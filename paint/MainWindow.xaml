@@ -1,7 +1,7 @@
 ﻿<Window x:Class="paint.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Vector Paint Editor" Height="600" Width="900" Background="#FFEEEEEE"
+        Title="Vector Paint Editor" Height="700" Width="1000" Background="#FFEEEEEE"
         Loaded="Window_Loaded">
     <DockPanel>
 
@@ -9,7 +9,7 @@
         <StackPanel Orientation="Horizontal"
                     DockPanel.Dock="Top"
                     Background="#EFEFEF"
-                    Height="40"
+                    Height="45"
                     VerticalAlignment="Top">
 
             <!-- Выбор фигуры через ComboBox -->
@@ -64,15 +64,92 @@
 
             <Separator Width="10" Margin="5,0"/>
 
+            <!-- Управление масштабированием -->
+            <Button Content="-" Click="ZoomOutButton_Click" 
+                    Margin="4,0,0,0" Padding="8,2" Width="30"
+                    ToolTip="Уменьшить масштаб (Ctrl + колесико мыши)"/>
+            <TextBlock Name="ZoomTextBlock" Text="100%" 
+                      VerticalAlignment="Center" Margin="8,0" 
+                      Width="40" TextAlignment="Center"/>
+            <Button Content="+" Click="ZoomInButton_Click" 
+                    Margin="0,0,4,0" Padding="8,2" Width="30"
+                    ToolTip="Увеличить масштаб (Ctrl + колесико мыши)"/>
+            <Button Content="100%" Click="ZoomResetButton_Click" 
+                    Margin="4,0" Padding="6,2" Width="45"
+                    ToolTip="Сбросить масштаб к 100%"/>
+
+            <Separator Width="10" Margin="5,0"/>
+
+            <!-- Кнопки редактирования -->
+            <Button Content="✏️ Редакт." Name="EditModeButton"
+                    Click="EditModeButton_Click" 
+                    Margin="4,4" Padding="6,2"
+                    Background="LightGreen"
+                    ToolTip="Переключиться в режим редактирования"/>
+            <Button Content="🗑️ Удалить" 
+                    Click="DeleteButton_Click" 
+                    Margin="4,4" Padding="6,2"
+                    Background="#FFFFE0E0"
+                    ToolTip="Удалить выделенную фигуру (Del)"/>
+
+            <Separator Width="10" Margin="5,0"/>
+
             <!-- Очистка холста -->
-            <Button Content="Очистить" Click="ClearButton_Click" Margin="8,4" Padding="6,2"/>
+            <Button Content="🧹 Очистить" Click="ClearButton_Click" 
+                    Margin="4,4" Padding="6,2"
+                    Background="#FFE0E0FF"
+                    ToolTip="Очистить весь холст"/>
         </StackPanel>
 
-        <!-- Холст для рисования -->
-        <Canvas Name="DrawCanvas"
-                Background="White"
-                MouseDown="Canvas_MouseDown"
-                MouseMove="Canvas_MouseMove"
-                MouseUp="Canvas_MouseUp"/>
+        <!-- Статусная строка -->
+        <StatusBar DockPanel.Dock="Bottom" Height="25" Background="#FFDDDDDD">
+            <StatusBarItem>
+                <TextBlock Name="StatusText" Text="Режим рисования"/>
+            </StatusBarItem>
+            <StatusBarItem HorizontalAlignment="Right">
+                <TextBlock Name="CoordinatesText" Text="X: 0, Y: 0"/>
+            </StatusBarItem>
+        </StatusBar>
+
+        <!-- Основной холст с поддержкой прокрутки и масштабирования -->
+        <ScrollViewer Name="MainScrollViewer" 
+                     HorizontalScrollBarVisibility="Auto" 
+                     VerticalScrollBarVisibility="Auto"
+                     PreviewMouseWheel="ScrollViewer_PreviewMouseWheel">
+
+            <Canvas Name="DrawCanvas"
+                    Width="2000"
+                    Height="2000"
+                    MouseDown="Canvas_MouseDown"
+                    MouseMove="Canvas_MouseMove"
+                    MouseUp="Canvas_MouseUp">
+
+                <!-- Сетка для удобства позиционирования -->
+                <Canvas.Resources>
+                    <DrawingBrush x:Key="GridPattern" TileMode="Tile" Viewport="0,0,50,50" ViewportUnits="Absolute">
+                        <DrawingBrush.Drawing>
+                            <DrawingGroup>
+                                <GeometryDrawing Brush="White">
+                                    <GeometryDrawing.Geometry>
+                                        <RectangleGeometry Rect="0,0,50,50"/>
+                                    </GeometryDrawing.Geometry>
+                                </GeometryDrawing>
+                                <GeometryDrawing Brush="LightGray">
+                                    <GeometryDrawing.Pen>
+                                        <Pen Brush="LightGray" Thickness="1"/>
+                                    </GeometryDrawing.Pen>
+                                </GeometryDrawing>
+                            </DrawingGroup>
+                        </DrawingBrush.Drawing>
+                    </DrawingBrush>
+                </Canvas.Resources>
+
+                <Canvas.Background>
+                    <StaticResource ResourceKey="GridPattern"/>
+                </Canvas.Background>
+
+            </Canvas>
+        </ScrollViewer>
+
     </DockPanel>
 </Window>
