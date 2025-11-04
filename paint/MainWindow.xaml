@@ -3,6 +3,8 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Vector Paint Editor" Height="700" Width="1000" Background="#FFEEEEEE"
         Loaded="Window_Loaded">
+
+    
     <DockPanel>
 
         <!-- Верхняя панель инструментов -->
@@ -124,7 +126,7 @@
                     MouseMove="Canvas_MouseMove"
                     MouseUp="Canvas_MouseUp">
 
-                <!-- Сетка для удобства позиционирования -->
+                
                 <Canvas.Resources>
                     <DrawingBrush x:Key="GridPattern" TileMode="Tile" Viewport="0,0,50,50" ViewportUnits="Absolute">
                         <DrawingBrush.Drawing>
@@ -152,4 +154,8 @@
         </ScrollViewer>
 
     </DockPanel>
+    <Window.InputBindings>
+        <KeyBinding Key="Z" Modifiers="Ctrl" Command="ApplicationCommands.Undo"/>
+        <KeyBinding Key="Y" Modifiers="Ctrl" Command="ApplicationCommands.Redo"/>
+    </Window.InputBindings>
 </Window>

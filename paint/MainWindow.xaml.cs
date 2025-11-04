@@ -28,6 +28,7 @@ namespace paint
         // Менеджеры
         private ShapeManager? _shapeManager;
         private ZoomManager? _zoomManager;
+        private UndoManager _undoManager = new UndoManager();
 
         // Режимы работы
         private EditorMode _currentMode = EditorMode.Draw;
@@ -35,6 +36,10 @@ namespace paint
         public MainWindow()
         {
             InitializeComponent();
+
+            // Обработчики отмены/повтора
+            CommandBindings.Add(new CommandBinding(ApplicationCommands.Undo, (s, e) => Undo()));
+            CommandBindings.Add(new CommandBinding(ApplicationCommands.Redo, (s, e) => Redo()));
         }
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
@@ -44,6 +49,9 @@ namespace paint
             _zoomManager = new ZoomManager(MainScrollViewer, DrawCanvas);
             UpdateStatusBar();
             UpdateZoomDisplay();
+
+            // Сохраняем начальное пустое состояние
+            _undoManager.SaveState(DrawCanvas, "Initial Empty State");
         }
 
         // Обновляем свойства из UI
@@ -77,8 +85,7 @@ namespace paint
                 };
 
                 _currentMode = EditorMode.Draw;
-                UpdateEditModeButton(); 
-
+                UpdateEditModeButton();
                 _shapeManager?.ClearSelection();
 
                 if (_currentShape != ShapeType.Polygon)
@@ -147,19 +154,38 @@ namespace paint
 
         private void ClearButton_Click(object sender, RoutedEventArgs e)
         {
+            // ВАЖНО: Сохраняем состояние ДО очистки
+            System.Diagnostics.Debug.WriteLine("=== SAVE STATE BEFORE CLEAR ===");
+            _undoManager.SaveState(DrawCanvas, "Before Clear");
+
             if (DrawCanvas != null)
                 DrawCanvas.Children.Clear();
 
             ResetPolygon();
-
-            // ПЕРЕИНИЦИАЛИЗИРУЕМ ShapeManager после очистки
             _shapeManager = new ShapeManager(DrawCanvas);
+            UpdateStatusBar();
+        }
 
+        private void Undo()
+        {
+            _undoManager.Undo(DrawCanvas);
+            _shapeManager = new ShapeManager(DrawCanvas);
+            UpdateStatusBar();
+        }
+
+        private void Redo()
+        {
+            _undoManager.Redo(DrawCanvas);
+            _shapeManager = new ShapeManager(DrawCanvas);
             UpdateStatusBar();
         }
 
         private void DeleteButton_Click(object sender, RoutedEventArgs e)
         {
+            // ВАЖНО: Сохраняем состояние ДО удаления
+            System.Diagnostics.Debug.WriteLine("=== SAVE STATE BEFORE DELETE ===");
+            _undoManager.SaveState(DrawCanvas, "Before Delete");
+
             _shapeManager?.DeleteSelectedShape();
             UpdateStatusBar();
         }
@@ -248,6 +274,7 @@ namespace paint
                     }
                     else
                     {
+                        // КЛИК НА ПУСТОМ МЕСТЕ - СНИМАЕМ ВЫДЕЛЕНИЕ
                         _shapeManager.ClearSelection();
                     }
                     UpdateStatusBar();
@@ -272,6 +299,10 @@ namespace paint
                 _startPoint = currentPoint;
                 _isDrawing = true;
 
+                // ВАЖНО: Сохраняем состояние ПЕРЕД началом рисования
+                System.Diagnostics.Debug.WriteLine("=== SAVE STATE BEFORE START DRAWING ===");
+                _undoManager.SaveState(DrawCanvas, $"Before Start Draw {_currentShape}");
+
                 _previewShape = CreateShape(_currentShape);
                 if (_previewShape != null)
                 {
@@ -288,9 +319,21 @@ namespace paint
         {
             if (button == MouseButton.Left)
             {
+                // Проверка двойного клика для завершения многоугольника
+                bool isDoubleClick = CheckDoubleClick(currentPoint);
+
+                if (isDoubleClick && _polygonState == PolygonState.Drawing)
+                {
+                    CompletePolygon();
+                    return;
+                }
+
                 if (_polygonState == PolygonState.NotStarted)
                 {
-                    // Начало рисования многоугольника
+                    // ВАЖНО: Сохраняем состояние ПЕРЕД началом рисования многоугольника
+                    System.Diagnostics.Debug.WriteLine("=== SAVE STATE BEFORE START POLYGON ===");
+                    _undoManager.SaveState(DrawCanvas, "Before Start Polygon");
+
                     _polygonPoints.Clear();
                     _polygonPoints.Add(currentPoint);
                     _polygonState = PolygonState.Drawing;
@@ -303,33 +346,36 @@ namespace paint
                 }
                 else if (_polygonState == PolygonState.Drawing)
                 {
-                    // Проверка двойного клика для завершения
-                    TimeSpan timeSinceLastClick = DateTime.Now - _lastClickTime;
-                    double distance = Point.Subtract(_lastClickPoint, currentPoint).Length;
-
-                    if (timeSinceLastClick.TotalMilliseconds < 500 && distance < 10 && _polygonPoints.Count >= 2)
-                    {
-                        // Двойной клик - завершаем многоугольник
-                        CompletePolygon();
-                        return;
-                    }
-
-                    // Добавляем новую точку
+                    // Добавляем новую точку к многоугольнику
                     _polygonPoints.Add(currentPoint);
+
                     if (_polygonPreview != null)
                     {
                         _polygonPreview.Points = new PointCollection(_polygonPoints);
                     }
-
-                    _lastClickTime = DateTime.Now;
-                    _lastClickPoint = currentPoint;
                 }
+
+                // Обновляем время последнего клика
+                _lastClickTime = DateTime.Now;
+                _lastClickPoint = currentPoint;
             }
             else if (button == MouseButton.Right && _polygonState == PolygonState.Drawing)
             {
-                // Правый клик - завершаем многоугольник
-                CompletePolygon();
+                // Правый клик - отмена рисования многоугольника
+                ResetPolygon();
+                UpdateStatusBar();
             }
+        }
+
+        // Проверка двойного клика
+        private bool CheckDoubleClick(Point currentPoint)
+        {
+            TimeSpan timeSinceLastClick = DateTime.Now - _lastClickTime;
+            double distance = Math.Sqrt(Math.Pow(currentPoint.X - _lastClickPoint.X, 2) +
+                                       Math.Pow(currentPoint.Y - _lastClickPoint.Y, 2));
+
+            // Считаем двойным кликом, если время между кликами < 300ms и расстояние < 10px
+            return timeSinceLastClick.TotalMilliseconds < 300 && distance < 10;
         }
 
         private void Canvas_MouseMove(object sender, MouseEventArgs e)
@@ -337,8 +383,6 @@ namespace paint
             if (DrawCanvas == null || _shapeManager == null) return;
 
             Point current = e.GetPosition(DrawCanvas);
-
-            // Обновляем координаты
             CoordinatesText.Text = $"X: {(int)current.X}, Y: {(int)current.Y}";
 
             if (_currentMode == EditorMode.Edit)
@@ -354,6 +398,7 @@ namespace paint
             }
             else if (_currentShape == ShapeType.Polygon && _polygonState == PolygonState.Drawing)
             {
+                // Обновляем предпросмотр многоугольника с текущей позицией мыши
                 if (_polygonPreview != null && _polygonPoints.Count > 0)
                 {
                     var previewPoints = new List<Point>(_polygonPoints) { current };
@@ -404,6 +449,10 @@ namespace paint
         {
             if (_polygonPoints.Count >= 3)
             {
+                // ВАЖНО: Сохраняем состояние ДО добавления фигуры
+                System.Diagnostics.Debug.WriteLine("=== SAVE STATE BEFORE COMPLETING POLYGON ===");
+                _undoManager.SaveState(DrawCanvas, "Before Complete Polygon");
+
                 Polygon finalPolygon = new Polygon();
                 ShapeFactory.ApplyProperties(finalPolygon, _currentProperties);
                 finalPolygon.Points = new PointCollection(_polygonPoints);
@@ -415,16 +464,14 @@ namespace paint
                 }
 
                 DrawCanvas.Children.Add(finalPolygon);
-
-                // Добавляем фигуру в менеджер
                 _shapeManager?.AddShape(finalPolygon);
-
                 UpdateStatusBar();
             }
             else
             {
-                // Если точек недостаточно, просто сбрасываем
-                System.Diagnostics.Debug.WriteLine("Недостаточно точек для многоугольника (нужно минимум 3)");
+                // Если точек недостаточно, просто отменяем рисование
+                MessageBox.Show("Для многоугольника нужно как минимум 3 точки", "Недостаточно точек",
+                               MessageBoxButton.OK, MessageBoxImage.Warning);
             }
 
             ResetPolygon();
@@ -520,11 +567,14 @@ namespace paint
             string shapeText = _currentMode == EditorMode.Draw ? $" | Фигура: {_currentShape}" : "";
             string selectionText = _shapeManager?.SelectedShape != null ? " | Фигура выделена" : string.Empty;
             string zoomText = _zoomManager != null ? $" | Масштаб: {_zoomManager.GetZoomText()}" : string.Empty;
+            string polygonText = _polygonState == PolygonState.Drawing ? $" | Точки: {_polygonPoints.Count}" : "";
 
             if (StatusText != null)
             {
-                StatusText.Text = $"{modeText}{shapeText}{selectionText}{zoomText}";
+                StatusText.Text = $"{modeText}{shapeText}{selectionText}{zoomText}{polygonText}";
             }
         }
     }
+
+    
 }
