@@ -1,0 +1,39 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<PaintProject CanvasWidth="2000" CanvasHeight="2000">
+  <Shape Type="Ellipse" StrokeColor="#FF000000" FillColor="#FFFF0000" StrokeThickness="2" HasFill="True">
+    <Left>104</Left>
+    <Top>73,03999999999999</Top>
+    <Width>403,20000000000005</Width>
+    <Height>403,20000000000005</Height>
+  </Shape>
+  <Shape Type="Ellipse" StrokeColor="#FF000000" FillColor="#FFFF0000" StrokeThickness="2" HasFill="True">
+    <Left>500,8</Left>
+    <Top>141,04</Top>
+    <Width>219,2</Width>
+    <Height>219,2</Height>
+  </Shape>
+  <Shape Type="Ellipse" StrokeColor="#FF000000" FillColor="#FFFF0000" StrokeThickness="2" HasFill="True">
+    <Left>381,6</Left>
+    <Top>194,64000000000001</Top>
+    <Width>163,20000000000005</Width>
+    <Height>163,20000000000005</Height>
+  </Shape>
+  <Shape Type="Ellipse" StrokeColor="#FF000000" FillColor="#FFFF0000" StrokeThickness="2" HasFill="True">
+    <Left>430,4000000000001</Left>
+    <Top>73,84</Top>
+    <Width>110,4</Width>
+    <Height>110,4</Height>
+  </Shape>
+  <Shape Type="Ellipse" StrokeColor="#FFFFFF00" FillColor="#FF0000FF" StrokeThickness="2" HasFill="True">
+    <Left>530,4000000000001</Left>
+    <Top>85,03999999999999</Top>
+    <Width>132,8</Width>
+    <Height>132,8</Height>
+  </Shape>
+  <Shape Type="Ellipse" StrokeColor="#FF000000" FillColor="#FF0000FF" StrokeThickness="2" HasFill="True">
+    <Left>504,8</Left>
+    <Top>61,04</Top>
+    <Width>0</Width>
+    <Height>0</Height>
+  </Shape>
+</PaintProject>

@@ -4,8 +4,24 @@
         Title="Vector Paint Editor" Height="700" Width="1000" Background="#FFEEEEEE"
         Loaded="Window_Loaded">
 
-    
     <DockPanel>
+        <!-- Меню файлов -->
+        <Menu DockPanel.Dock="Top" Background="#FFEEEEEE">
+            <MenuItem Header="Файл">
+                <MenuItem Header="Новый" Command="New" InputGestureText="Ctrl+N"/>
+                <MenuItem Header="Открыть..." Command="Open" InputGestureText="Ctrl+O"/>
+                <MenuItem Header="Сохранить" Command="Save" InputGestureText="Ctrl+S"/>
+                <MenuItem Header="Сохранить как..." Command="SaveAs"/>
+                <Separator/>
+                <MenuItem Header="Экспорт в SVG..." Click="ExportToSvg_Click"/>
+                <Separator/>
+                <MenuItem Header="Выход" Click="Exit_Click"/>
+            </MenuItem>
+            <MenuItem Header="Правка">
+                <MenuItem Header="Отменить" Command="Undo" InputGestureText="Ctrl+Z"/>
+                <MenuItem Header="Повторить" Command="Redo" InputGestureText="Ctrl+Y"/>
+            </MenuItem>
+        </Menu>
 
         <!-- Верхняя панель инструментов -->
         <StackPanel Orientation="Horizontal"
@@ -126,7 +142,6 @@
                     MouseMove="Canvas_MouseMove"
                     MouseUp="Canvas_MouseUp">
 
-                
                 <Canvas.Resources>
                     <DrawingBrush x:Key="GridPattern" TileMode="Tile" Viewport="0,0,50,50" ViewportUnits="Absolute">
                         <DrawingBrush.Drawing>
@@ -155,6 +170,9 @@
 
     </DockPanel>
     <Window.InputBindings>
+        <KeyBinding Key="N" Modifiers="Ctrl" Command="New"/>
+        <KeyBinding Key="O" Modifiers="Ctrl" Command="Open"/>
+        <KeyBinding Key="S" Modifiers="Ctrl" Command="Save"/>
         <KeyBinding Key="Z" Modifiers="Ctrl" Command="ApplicationCommands.Undo"/>
         <KeyBinding Key="Y" Modifiers="Ctrl" Command="ApplicationCommands.Redo"/>
     </Window.InputBindings>

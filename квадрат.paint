@@ -1,0 +1,9 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<PaintProject CanvasWidth="2000" CanvasHeight="2000">
+  <Shape Type="Rectangle" StrokeColor="#FF000000" FillColor="#FFFF0000" StrokeThickness="2" HasFill="True">
+    <Left>537,6</Left>
+    <Top>145,84</Top>
+    <Width>283,20000000000005</Width>
+    <Height>283,20000000000005</Height>
+  </Shape>
+</PaintProject>
