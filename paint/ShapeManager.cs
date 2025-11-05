@@ -7,6 +7,7 @@ using System.Windows.Shapes;
 
 namespace paint
 {
+    // Управление фигурами на холсте: выделение, перемещение, изменение размера
     public class ShapeManager
     {
         private Canvas _canvas;
@@ -16,10 +17,11 @@ namespace paint
         private bool _isResizing = false;
         private ResizeHandle _activeResizeHandle;
 
+        // Маркеры изменения размера
         private const double ResizeHandleSize = 8;
         private Dictionary<ResizeHandle, Rectangle> _resizeHandles = new Dictionary<ResizeHandle, Rectangle>();
 
-        // Для хранения оригинальных координат Line и Polygon
+        // Для хранения исходных значений при изменении размера
         private double _originalX1, _originalY1, _originalX2, _originalY2;
         private PointCollection _originalPolygonPoints;
 
@@ -29,18 +31,19 @@ namespace paint
             InitializeResizeHandles();
         }
 
-        // Добавляет фигуру в менеджер
+        // Добавляет фигуру и выделяет ее
         public void AddShape(Shape shape)
         {
             SelectShape(shape);
         }
 
-        // Выделяет фигуру на холсте
+        // Выделяет фигуру и показывает маркеры
         public void SelectShape(Shape shape)
         {
             ClearSelection();
             _selectedShape = shape;
 
+            // Устанавливаем позицию для многоугольника, если не установлена
             if (shape is Polygon polygon && double.IsNaN(Canvas.GetLeft(polygon)))
             {
                 Canvas.SetLeft(polygon, 0);
@@ -77,7 +80,7 @@ namespace paint
             }
         }
 
-        // Обновляет позицию фигуры при перемещении
+        // Обновляет позицию при перемещении
         public void UpdateDrag(Point currentPoint)
         {
             if (_isDragging && _selectedShape != null)
@@ -87,6 +90,7 @@ namespace paint
 
                 if (_selectedShape is Line line)
                 {
+                    // Перемещение линии
                     line.X1 += deltaX;
                     line.Y1 += deltaY;
                     line.X2 += deltaX;
@@ -94,7 +98,7 @@ namespace paint
                 }
                 else if (_selectedShape is Polygon polygon)
                 {
-                    // Перемещаем весь полигон
+                    // Перемещение многоугольника
                     PointCollection newPoints = new PointCollection();
                     foreach (Point point in polygon.Points)
                     {
@@ -104,6 +108,7 @@ namespace paint
                 }
                 else
                 {
+                    // Перемещение обычных фигур
                     Canvas.SetLeft(_selectedShape, Canvas.GetLeft(_selectedShape) + deltaX);
                     Canvas.SetTop(_selectedShape, Canvas.GetTop(_selectedShape) + deltaY);
                 }
@@ -113,13 +118,13 @@ namespace paint
             }
         }
 
-        // Завершает перемещение фигуры
+        // Завершает перемещение
         public void EndDrag()
         {
             _isDragging = false;
         }
 
-        // Начинает изменение размера фигуры
+        // Начинает изменение размера
         public void StartResize(ResizeHandle handle, Point startPoint)
         {
             if (_selectedShape != null)
@@ -128,6 +133,7 @@ namespace paint
                 _activeResizeHandle = handle;
                 _dragStartPoint = startPoint;
 
+                // Сохраняем исходные значения
                 if (_selectedShape is Line line)
                 {
                     _originalX1 = line.X1;
@@ -142,7 +148,7 @@ namespace paint
             }
         }
 
-        // Обновляет размер фигуры
+        // Обновляет размер при изменении
         public void UpdateResize(Point currentPoint)
         {
             if (_isResizing && _selectedShape != null)
@@ -152,7 +158,7 @@ namespace paint
 
                 if (_selectedShape is Line line)
                 {
-                    // Для Line - изменяем конкретную конечную точку
+                    // Изменение размера линии
                     switch (_activeResizeHandle)
                     {
                         case ResizeHandle.TopLeft:
@@ -175,7 +181,7 @@ namespace paint
                 }
                 else if (_selectedShape is Polygon polygon && _originalPolygonPoints != null)
                 {
-                    // Для Polygon - масштабируем все точки относительно центра
+                    // Масштабирование многоугольника
                     Point center = GetPolygonCenter(_originalPolygonPoints);
                     double scaleX = 1.0 + deltaX / 100;
                     double scaleY = 1.0 + deltaY / 100;
@@ -191,7 +197,7 @@ namespace paint
                 }
                 else
                 {
-                    // Для Rectangle и Ellipse
+                    // Изменение размера обычных фигур
                     double left = Canvas.GetLeft(_selectedShape);
                     double top = Canvas.GetTop(_selectedShape);
                     double width = _selectedShape.Width;
@@ -227,7 +233,7 @@ namespace paint
             }
         }
 
-        // Завершает изменение размера фигуры
+        // Завершает изменение размера
         public void EndResize()
         {
             _isResizing = false;
@@ -240,7 +246,7 @@ namespace paint
             UpdateResizeHandlesPosition();
         }
 
-        // Находит центр полигона
+        // Находит центр многоугольника
         private Point GetPolygonCenter(PointCollection points)
         {
             double sumX = 0, sumY = 0;
@@ -278,19 +284,21 @@ namespace paint
                 return IsPointInPolygon(point, polygon);
             }
 
+            // Для прямоугольников и эллипсов
             double left = Canvas.GetLeft(shape);
             double top = Canvas.GetTop(shape);
             Rect rect = new Rect(left, top, shape.Width, shape.Height);
             return rect.Contains(point);
         }
 
-        // Проверяет, находится ли точка внутри полигона
+        // Проверяет, находится ли точка внутри многоугольника
         private bool IsPointInPolygon(Point point, Polygon polygon)
         {
             PointCollection points = polygon.Points;
             int count = points.Count;
             bool inside = false;
 
+            // Алгоритм проверки точки в многоугольнике
             for (int i = 0, j = count - 1; i < count; j = i++)
             {
                 if (((points[i].Y > point.Y) != (points[j].Y > point.Y)) &&
@@ -302,9 +310,10 @@ namespace paint
             return inside;
         }
 
-        // Получает фигуру под указанной точкой
+        // Находит фигуру в указанной точке
         public Shape? GetShapeAtPoint(Point point)
         {
+            // Проверяем с конца (верхние фигуры сначала)
             for (int i = _canvas.Children.Count - 1; i >= 0; i--)
             {
                 if (_canvas.Children[i] is Shape shape &&
@@ -318,10 +327,12 @@ namespace paint
             return null;
         }
 
+        // Свойства для отслеживания состояния
         public bool IsDragging => _isDragging;
         public bool IsResizing => _isResizing;
         public Shape? SelectedShape => _selectedShape;
 
+        // Инициализация маркеров изменения размера
         private void InitializeResizeHandles()
         {
             foreach (ResizeHandle handle in Enum.GetValues(typeof(ResizeHandle)))
@@ -340,6 +351,7 @@ namespace paint
             }
         }
 
+        // Показывает маркеры выделения
         private void ShowSelectionMarkers()
         {
             if (_selectedShape != null)
@@ -352,27 +364,29 @@ namespace paint
             }
         }
 
+        // Скрывает маркеры выделения
         private void HideSelectionMarkers()
         {
             foreach (var handle in _resizeHandles.Values)
                 handle.Visibility = Visibility.Collapsed;
         }
 
+        // Обновляет позиции маркеров изменения размера
         private void UpdateResizeHandlesPosition()
         {
             if (_selectedShape == null) return;
 
             if (_selectedShape is Line line)
             {
-                // Для Line - маркеры только на концах
+                // Для линии используем только два маркера
                 SetResizeHandlePosition(ResizeHandle.TopLeft, line.X1 - ResizeHandleSize / 2, line.Y1 - ResizeHandleSize / 2);
                 SetResizeHandlePosition(ResizeHandle.TopRight, line.X2 - ResizeHandleSize / 2, line.Y2 - ResizeHandleSize / 2);
-                SetResizeHandlePosition(ResizeHandle.BottomLeft, -100, -100); // Скрыть
-                SetResizeHandlePosition(ResizeHandle.BottomRight, -100, -100); // Скрыть
+                SetResizeHandlePosition(ResizeHandle.BottomLeft, -100, -100); // Скрываем
+                SetResizeHandlePosition(ResizeHandle.BottomRight, -100, -100); // Скрываем
             }
             else if (_selectedShape is Polygon polygon)
             {
-                // Для Polygon - маркеры вокруг bounding box
+                // Для многоугольника вычисляем ограничивающий прямоугольник
                 Rect bounds = GetPolygonBounds(polygon);
                 SetResizeHandlePosition(ResizeHandle.TopLeft, bounds.Left - ResizeHandleSize / 2, bounds.Top - ResizeHandleSize / 2);
                 SetResizeHandlePosition(ResizeHandle.TopRight, bounds.Right - ResizeHandleSize / 2, bounds.Top - ResizeHandleSize / 2);
@@ -381,7 +395,7 @@ namespace paint
             }
             else
             {
-                // Для Rectangle и Ellipse
+                // Для обычных фигур
                 double left = Canvas.GetLeft(_selectedShape);
                 double top = Canvas.GetTop(_selectedShape);
                 double width = _selectedShape.Width;
@@ -394,7 +408,7 @@ namespace paint
             }
         }
 
-        // Находит bounding box полигона
+        // Вычисляет ограничивающий прямоугольник для многоугольника
         private Rect GetPolygonBounds(Polygon polygon)
         {
             double minX = double.MaxValue, minY = double.MaxValue;
@@ -411,6 +425,7 @@ namespace paint
             return new Rect(minX, minY, maxX - minX, maxY - minY);
         }
 
+        // Устанавливает позицию маркера изменения размера
         private void SetResizeHandlePosition(ResizeHandle handle, double x, double y)
         {
             if (_resizeHandles.TryGetValue(handle, out var rect))
@@ -420,6 +435,7 @@ namespace paint
             }
         }
 
+        // Проверяет, находится ли точка внутри прямоугольника
         private bool IsPointInRectangle(Point point, Rectangle rect)
         {
             double left = Canvas.GetLeft(rect);
@@ -428,12 +444,14 @@ namespace paint
             return rectBounds.Contains(point);
         }
 
+        // Проверяет, находится ли точка рядом с линией
         private bool IsPointNearLine(Point point, Line line)
         {
             double distance = DistanceToLine(point, new Point(line.X1, line.Y1), new Point(line.X2, line.Y2));
-            return distance < 10;
+            return distance < 10; // Пороговое расстояние 10 пикселей
         }
 
+        // Вычисляет расстояние от точки до линии
         private double DistanceToLine(Point point, Point lineStart, Point lineEnd)
         {
             double A = point.X - lineStart.X;
@@ -467,21 +485,5 @@ namespace paint
             double dy = point.Y - yy;
             return Math.Sqrt(dx * dx + dy * dy);
         }
-    }
-
-    // Маркеры изменения размера
-    public enum ResizeHandle
-    {
-        TopLeft,
-        TopRight,
-        BottomLeft,
-        BottomRight
-    }
-
-    // Режимы работы редактора
-    public enum EditorMode
-    {
-        Draw,
-        Edit
     }
 }

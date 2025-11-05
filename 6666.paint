@@ -1,0 +1,79 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<PaintProject CanvasWidth="2000" CanvasHeight="2000">
+  <Shape Type="Polygon" StrokeColor="#FF800080" FillColor="#FF008000" StrokeThickness="2" HasFill="True">
+    <Points>
+      <Point X="675,2" Y="317,03999999999996" />
+      <Point X="565,5999999999999" Y="218,63999999999996" />
+      <Point X="395,19999999999993" Y="297,03999999999996" />
+      <Point X="544" Y="447,43999999999994" />
+      <Point X="863,2" Y="352,24" />
+    </Points>
+  </Shape>
+  <Shape Type="Polygon" StrokeColor="#FF800080" FillColor="#FF008000" StrokeThickness="2" HasFill="True">
+    <Points>
+      <Point X="471,20000000000005" Y="65,84" />
+      <Point X="494,40000000000003" Y="154,64000000000001" />
+      <Point X="494,40000000000003" Y="154,64000000000001" />
+      <Point X="481,6" Y="151,44" />
+    </Points>
+  </Shape>
+  <Shape Type="Polygon" StrokeColor="#FF800080" FillColor="#FF008000" StrokeThickness="2" HasFill="True">
+    <Points>
+      <Point X="481,6" Y="151,44" />
+      <Point X="408,8" Y="235,44000000000003" />
+      <Point X="364,8" Y="167,44" />
+    </Points>
+  </Shape>
+  <Shape Type="Rectangle" StrokeColor="#FF800080" FillColor="#FF008000" StrokeThickness="2" HasFill="True">
+    <Left>102,4</Left>
+    <Top>109,03999999999999</Top>
+    <Width>185,6</Width>
+    <Height>160,00000000000003</Height>
+  </Shape>
+  <Shape Type="Rectangle" StrokeColor="#FF800080" FillColor="#FF008000" StrokeThickness="2" HasFill="True">
+    <Left>663,2</Left>
+    <Top>110,64000000000001</Top>
+    <Width>0</Width>
+    <Height>0</Height>
+  </Shape>
+  <Shape Type="Rectangle" StrokeColor="#FF800080" FillColor="#FF008000" StrokeThickness="2" HasFill="True">
+    <Left>699,2</Left>
+    <Top>92,24000000000001</Top>
+    <Width>99,20000000000005</Width>
+    <Height>161,6</Height>
+  </Shape>
+  <Shape Type="Polygon" StrokeColor="#FF800080" FillColor="#FF008000" StrokeThickness="2" HasFill="True">
+    <Points>
+      <Point X="140" Y="401,04" />
+      <Point X="241,60000000000002" Y="341,04" />
+      <Point X="373,6" Y="434,64000000000004" />
+      <Point X="287,2" Y="495,44" />
+    </Points>
+  </Shape>
+  <Shape Type="Polygon" StrokeColor="#FF800080" FillColor="#FF008000" StrokeThickness="2" HasFill="True">
+    <Points>
+      <Point X="587,2" Y="487,44" />
+      <Point X="759,2" Y="480,24000000000007" />
+      <Point X="743,2" Y="433,84000000000003" />
+      <Point X="660" Y="421,84000000000003" />
+    </Points>
+  </Shape>
+  <Shape Type="Ellipse" StrokeColor="#FF800080" FillColor="#FF0000FF" StrokeThickness="2" HasFill="True">
+    <Left>349,6</Left>
+    <Top>177,84000000000003</Top>
+    <Width>291,2</Width>
+    <Height>244,00000000000006</Height>
+  </Shape>
+  <Shape Type="Ellipse" StrokeColor="#FF800080" FillColor="#FF0000FF" StrokeThickness="2" HasFill="True">
+    <Left>764</Left>
+    <Top>216,23999999999998</Top>
+    <Width>0</Width>
+    <Height>0</Height>
+  </Shape>
+  <Shape Type="Ellipse" StrokeColor="#FF800080" FillColor="#FF0000FF" StrokeThickness="2" HasFill="True">
+    <Left>887,2</Left>
+    <Top>229,04</Top>
+    <Width>0</Width>
+    <Height>0</Height>
+  </Shape>
+</PaintProject>

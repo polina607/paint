@@ -7,13 +7,14 @@ using System.Windows.Threading;
 
 namespace paint
 {
-    // Менеджер для управления масштабированием холста
+    // Управление масштабированием холста
     public class ZoomManager
     {
         private ScrollViewer _scrollViewer;
         private Canvas _canvas;
-
         private double _zoom = 1.0;
+
+        // Настройки масштабирования
         private const double MinZoom = 0.1;
         private const double MaxZoom = 5.0;
         private const double ZoomStep = 0.1;
@@ -43,7 +44,7 @@ namespace paint
             ChangeZoom(1.0);
         }
 
-        // Обрабатывает масштабирование колесиком мыши
+        // Обрабатывает колесико мыши с зажатым Ctrl
         public void HandleMouseWheel(MouseWheelEventArgs e)
         {
             if (Keyboard.Modifiers == ModifierKeys.Control)
@@ -73,8 +74,10 @@ namespace paint
 
         private void ChangeZoom(double newZoom)
         {
+            // Ограничиваем масштаб минимальным и максимальным значениями
             newZoom = Math.Max(MinZoom, Math.Min(MaxZoom, newZoom));
 
+            // Сохраняем центр прокрутки для плавного масштабирования
             Point scrollCenter = new Point(
                 _scrollViewer.HorizontalOffset + _scrollViewer.ViewportWidth / 2,
                 _scrollViewer.VerticalOffset + _scrollViewer.ViewportHeight / 2
@@ -83,6 +86,7 @@ namespace paint
             _zoom = newZoom;
             ApplyZoomTransform();
 
+            // Обновляем позицию прокрутки после масштабирования
             Dispatcher.CurrentDispatcher.BeginInvoke(new Action(() =>
             {
                 _scrollViewer.ScrollToHorizontalOffset(scrollCenter.X * (_zoom / newZoom) - _scrollViewer.ViewportWidth / 2);

@@ -1,5 +1,6 @@
 ﻿namespace paint
 {
+    // Типы фигур для рисования
     public enum ShapeType
     {
         Line,

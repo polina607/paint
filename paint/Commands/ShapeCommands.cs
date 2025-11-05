@@ -1,13 +1,14 @@
-﻿using System.Windows;
+﻿using System;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace paint.Commands
 {
-    public class AddShapeCommand : ICommand
+    // Команда добавления фигуры
+    public class AddShapeCommand : IUndoCommand
     {
         private Canvas _canvas;
         private Shape _shape;
@@ -16,7 +17,7 @@ namespace paint.Commands
         public AddShapeCommand(Canvas canvas, Shape shape, ShapeManager shapeManager)
         {
             _canvas = canvas;
-            _shape = CloneShape(shape); // Клонируем фигуру вместо использования оригинала
+            _shape = CloneShape(shape);
             _shapeManager = shapeManager;
         }
 
@@ -32,6 +33,7 @@ namespace paint.Commands
             _shapeManager.ClearSelection();
         }
 
+        // Создает копию фигуры для отмены/повтора
         private Shape CloneShape(Shape original)
         {
             if (original is Line line)
@@ -90,7 +92,8 @@ namespace paint.Commands
         }
     }
 
-    public class RemoveShapeCommand : ICommand
+    // Команда удаления фигуры
+    public class RemoveShapeCommand : IUndoCommand
     {
         private Canvas _canvas;
         private Shape _shape;
@@ -99,7 +102,7 @@ namespace paint.Commands
         public RemoveShapeCommand(Canvas canvas, Shape shape, ShapeManager shapeManager)
         {
             _canvas = canvas;
-            _shape = shape; // Используем оригинальную фигуру для удаления
+            _shape = shape;
             _shapeManager = shapeManager;
         }
 
@@ -116,7 +119,8 @@ namespace paint.Commands
         }
     }
 
-    public class MoveShapeCommand : ICommand
+    // Команда перемещения фигуры
+    public class MoveShapeCommand : IUndoCommand
     {
         private Shape _shape;
         private Point _oldPosition;
@@ -174,7 +178,8 @@ namespace paint.Commands
         }
     }
 
-    public class ResizeShapeCommand : ICommand
+    // Команда изменения размера фигуры
+    public class ResizeShapeCommand : IUndoCommand
     {
         private Shape _shape;
         private Rect _oldBounds;
@@ -210,7 +215,6 @@ namespace paint.Commands
             }
             else if (_shape is Polygon polygon)
             {
-                // Масштабируем полигон
                 double scaleX = bounds.Width / _oldBounds.Width;
                 double scaleY = bounds.Height / _oldBounds.Height;
 
@@ -235,7 +239,8 @@ namespace paint.Commands
         }
     }
 
-    public class ChangePropertiesCommand : ICommand
+    // Команда изменения свойств фигуры
+    public class ChangePropertiesCommand : IUndoCommand
     {
         private Shape _shape;
         private ShapeProperties _oldProperties;
@@ -253,11 +258,13 @@ namespace paint.Commands
         public void Execute()
         {
             ApplyProperties(_newProperties);
+            _shapeManager.SelectShape(_shape);
         }
 
         public void Undo()
         {
             ApplyProperties(_oldProperties);
+            _shapeManager.SelectShape(_shape);
         }
 
         private void ApplyProperties(ShapeProperties properties)

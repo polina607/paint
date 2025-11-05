@@ -5,7 +5,7 @@
         Loaded="Window_Loaded">
 
     <DockPanel>
-        <!-- Меню файлов -->
+        <!-- Меню -->
         <Menu DockPanel.Dock="Top" Background="#FFEEEEEE">
             <MenuItem Header="Файл">
                 <MenuItem Header="Новый" Command="New" InputGestureText="Ctrl+N"/>
@@ -23,14 +23,14 @@
             </MenuItem>
         </Menu>
 
-        <!-- Верхняя панель инструментов -->
+        <!-- Панель инструментов -->
         <StackPanel Orientation="Horizontal"
                     DockPanel.Dock="Top"
                     Background="#EFEFEF"
                     Height="45"
                     VerticalAlignment="Top">
 
-            <!-- Выбор фигуры через ComboBox -->
+            <!-- Выбор фигуры -->
             <TextBlock Text="Фигура:" VerticalAlignment="Center" Margin="10,0,4,0"/>
             <ComboBox Name="ShapeBox" 
                      Width="130" 
@@ -47,7 +47,7 @@
 
             <Separator Width="10" Margin="5,0"/>
 
-            <!-- Выбор цвета контура -->
+            <!-- Цвет контура -->
             <TextBlock Text="Контур:" VerticalAlignment="Center" Margin="4,0"/>
             <ComboBox Name="StrokeColorBox" 
                      Width="100" 
@@ -64,7 +64,7 @@
 
             <Separator Width="10" Margin="5,0"/>
 
-            <!-- Выбор цвета заливки -->
+            <!-- Цвет заливки -->
             <TextBlock Text="Заливка:" VerticalAlignment="Center" Margin="4,0"/>
             <ComboBox Name="FillColorBox" 
                      Width="100" 
@@ -82,7 +82,7 @@
 
             <Separator Width="10" Margin="5,0"/>
 
-            <!-- Управление масштабированием -->
+            <!-- Масштабирование -->
             <Button Content="-" Click="ZoomOutButton_Click" 
                     Margin="4,0,0,0" Padding="8,2" Width="30"
                     ToolTip="Уменьшить масштаб (Ctrl + колесико мыши)"/>
@@ -98,7 +98,7 @@
 
             <Separator Width="10" Margin="5,0"/>
 
-            <!-- Кнопки редактирования -->
+            <!-- Редактирование -->
             <Button Content="✏️ Редакт." Name="EditModeButton"
                     Click="EditModeButton_Click" 
                     Margin="4,4" Padding="6,2"
@@ -112,7 +112,7 @@
 
             <Separator Width="10" Margin="5,0"/>
 
-            <!-- Очистка холста -->
+            <!-- Очистка -->
             <Button Content="🧹 Очистить" Click="ClearButton_Click" 
                     Margin="4,4" Padding="6,2"
                     Background="#FFE0E0FF"
@@ -129,7 +129,7 @@
             </StatusBarItem>
         </StatusBar>
 
-        <!-- Основной холст с поддержкой прокрутки и масштабирования -->
+        <!-- Холст -->
         <ScrollViewer Name="MainScrollViewer" 
                      HorizontalScrollBarVisibility="Auto" 
                      VerticalScrollBarVisibility="Auto"
@@ -142,6 +142,7 @@
                     MouseMove="Canvas_MouseMove"
                     MouseUp="Canvas_MouseUp">
 
+                <!-- Сетчатый фон -->
                 <Canvas.Resources>
                     <DrawingBrush x:Key="GridPattern" TileMode="Tile" Viewport="0,0,50,50" ViewportUnits="Absolute">
                         <DrawingBrush.Drawing>
@@ -169,6 +170,8 @@
         </ScrollViewer>
 
     </DockPanel>
+
+    <!-- Горячие клавиши -->
     <Window.InputBindings>
         <KeyBinding Key="N" Modifiers="Ctrl" Command="New"/>
         <KeyBinding Key="O" Modifiers="Ctrl" Command="Open"/>

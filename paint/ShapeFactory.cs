@@ -3,9 +3,10 @@ using System.Windows.Media;
 
 namespace paint
 {
-    // Фабрика для создания фигур
+    // Фабрика для создания и настройки фигур
     public static class ShapeFactory
     {
+        // Создает фигуру указанного типа
         public static Shape CreateShape(ShapeType type)
         {
             return type switch
@@ -20,6 +21,7 @@ namespace paint
             };
         }
 
+        // Применяет свойства к фигуре
         public static void ApplyProperties(Shape shape, ShapeProperties properties)
         {
             if (shape == null || properties == null)
@@ -28,6 +30,7 @@ namespace paint
             shape.Stroke = properties.Stroke;
             shape.StrokeThickness = properties.StrokeThickness;
 
+            // Линии не имеют заливки
             if (properties.HasFill && !(shape is Line))
             {
                 shape.Fill = properties.Fill;
