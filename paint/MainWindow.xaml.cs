@@ -10,6 +10,7 @@ using System.Xml;
 using Microsoft.Win32;
 using System.Text;
 using System.Windows.Markup;
+using paint.Commands; // Добавьте этот using
 
 namespace paint
 {
@@ -33,7 +34,6 @@ namespace paint
         // Менеджеры
         private ShapeManager? _shapeManager;
         private ZoomManager? _zoomManager;
-        private UndoManager _undoManager = new UndoManager();
 
         // Режимы работы
         private EditorMode _currentMode = EditorMode.Draw;
@@ -56,63 +56,13 @@ namespace paint
             CommandBindings.Add(new CommandBinding(ApplicationCommands.SaveAs, (s, e) => SaveProjectAs()));
         }
 
-        // Подписка на событие изменения фигур
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
             UpdatePropertiesFromUI();
             _shapeManager = new ShapeManager(DrawCanvas);
-            _shapeManager.ShapeModified += OnShapeModified; // ДОБАВЬТЕ ЭТУ СТРОКУ
             _zoomManager = new ZoomManager(MainScrollViewer, DrawCanvas);
             UpdateStatusBar();
             UpdateZoomDisplay();
-
-            // Сохраняем начальное пустое состояние
-            _undoManager.SaveState(DrawCanvas, "Initial Empty State");
-        }
-
-        // Обработчик изменения фигур
-        private void OnShapeModified()
-        {
-            // Сохраняем состояние после модификации фигуры
-            System.Diagnostics.Debug.WriteLine("=== SAVE STATE AFTER SHAPE MODIFICATION ===");
-            _undoManager.SaveState(DrawCanvas, "After Shape Modification");
-        }
-
-        // Обновите HandleEditModeMouseDown для сохранения состояния ДО действий:
-        private void HandleEditModeMouseDown(Point currentPoint, MouseButton button)
-        {
-            if (button == MouseButton.Left)
-            {
-                if (_shapeManager != null)
-                {
-                    var resizeHandle = _shapeManager.GetResizeHandleAtPoint(currentPoint);
-
-                    if (resizeHandle.HasValue)
-                    {
-                        // Сохраняем состояние ДО изменения размера
-                        System.Diagnostics.Debug.WriteLine("=== SAVE STATE BEFORE RESIZE ===");
-                        _undoManager.SaveState(DrawCanvas, "Before Resize");
-                        _shapeManager.StartResize(resizeHandle.Value, currentPoint);
-                        UpdateStatusBar();
-                        return;
-                    }
-
-                    var shape = _shapeManager.GetShapeAtPoint(currentPoint);
-                    if (shape != null)
-                    {
-                        // Сохраняем состояние ДО перемещения
-                        System.Diagnostics.Debug.WriteLine("=== SAVE STATE BEFORE DRAG ===");
-                        _undoManager.SaveState(DrawCanvas, "Before Drag");
-                        _shapeManager.SelectShape(shape);
-                        _shapeManager.StartDrag(currentPoint);
-                    }
-                    else
-                    {
-                        _shapeManager.ClearSelection();
-                    }
-                    UpdateStatusBar();
-                }
-            }
         }
 
         // Обновляем свойства из UI
@@ -176,8 +126,24 @@ namespace paint
         {
             if (_shapeManager?.SelectedShape != null)
             {
+                var oldProperties = GetShapeProperties(_shapeManager.SelectedShape);
                 ShapeFactory.ApplyProperties(_shapeManager.SelectedShape, _currentProperties);
+
+                // Создаем команду для изменения свойств
+                var command = new ChangePropertiesCommand(_shapeManager.SelectedShape, oldProperties, _currentProperties, _shapeManager);
+                UndoRedoManager.Instance.Execute(command);
             }
+        }
+
+        private ShapeProperties GetShapeProperties(Shape shape)
+        {
+            return new ShapeProperties
+            {
+                Stroke = shape.Stroke,
+                Fill = shape.Fill,
+                StrokeThickness = shape.StrokeThickness,
+                HasFill = shape.Fill != Brushes.Transparent
+            };
         }
 
         // Обработчики масштабирования
@@ -215,57 +181,55 @@ namespace paint
 
         private void ClearButton_Click(object sender, RoutedEventArgs e)
         {
-            // ВАЖНО: Сохраняем состояние ДО очистки
-            System.Diagnostics.Debug.WriteLine("=== SAVE STATE BEFORE CLEAR ===");
-            _undoManager.SaveState(DrawCanvas, "Before Clear");
+            var result = MessageBox.Show("Очистить весь холст?", "Очистка",
+                                        MessageBoxButton.YesNo, MessageBoxImage.Question);
 
-            if (DrawCanvas != null)
-                DrawCanvas.Children.Clear();
+            if (result == MessageBoxResult.Yes)
+            {
+                // Создаем команду для очистки всех фигур
+                var shapes = new List<Shape>();
+                foreach (var child in DrawCanvas.Children)
+                {
+                    if (child is Shape shape && !IsResizeHandle(shape))
+                    {
+                        shapes.Add(shape);
+                    }
+                }
 
-            ResetPolygon();
-            _shapeManager = new ShapeManager(DrawCanvas);
-            UpdateStatusBar();
+                // Выполняем команды удаления для каждой фигуры
+                foreach (var shape in shapes)
+                {
+                    var command = new RemoveShapeCommand(DrawCanvas, shape, _shapeManager);
+                    UndoRedoManager.Instance.Execute(command);
+                }
+
+                ResetPolygon();
+                UpdateStatusBar();
+            }
         }
 
-        // Обновленные методы отмены/повтора
+        // Методы отмены/повтора
         private void Undo()
         {
-            _undoManager.Undo(DrawCanvas);
-            _shapeManager = new ShapeManager(DrawCanvas);
+            UndoRedoManager.Instance.Undo();
             UpdateStatusBar();
-            UpdateUndoRedoButtons();
         }
 
         private void Redo()
         {
-            _undoManager.Redo(DrawCanvas);
-            _shapeManager = new ShapeManager(DrawCanvas);
+            UndoRedoManager.Instance.Redo();
             UpdateStatusBar();
-            UpdateUndoRedoButtons();
-        }
-
-        private void UpdateUndoRedoButtons()
-        {
-            // Обновляем состояние кнопок отмены/повтора в UI
-            // (если у вас есть такие кнопки)
-            CommandManager.InvalidateRequerySuggested();
         }
 
         private void DeleteButton_Click(object sender, RoutedEventArgs e)
         {
-            if (_shapeManager?.SelectedShape == null) return;
-
-            // ВАЖНО: Сохраняем состояние ДО удаления
-            System.Diagnostics.Debug.WriteLine("=== SAVE STATE BEFORE DELETE ===");
-            _undoManager.SaveState(DrawCanvas, "Before Delete");
-
-            _shapeManager.DeleteSelectedShape();
-
-            // ВАЖНО: Сохраняем состояние ПОСЛЕ удаления
-            System.Diagnostics.Debug.WriteLine("=== SAVE STATE AFTER DELETE ===");
-            _undoManager.SaveState(DrawCanvas, "After Delete");
-
-            UpdateStatusBar();
+            if (_shapeManager?.SelectedShape != null)
+            {
+                var shape = _shapeManager.SelectedShape;
+                var command = new RemoveShapeCommand(DrawCanvas, shape, _shapeManager);
+                UndoRedoManager.Instance.Execute(command);
+                UpdateStatusBar();
+            }
         }
 
         private void EditModeButton_Click(object sender, RoutedEventArgs e)
@@ -328,7 +292,36 @@ namespace paint
             }
         }
 
+        // Режим редактирования
+        private void HandleEditModeMouseDown(Point currentPoint, MouseButton button)
+        {
+            if (button == MouseButton.Left)
+            {
+                if (_shapeManager != null)
+                {
+                    var resizeHandle = _shapeManager.GetResizeHandleAtPoint(currentPoint);
 
+                    if (resizeHandle.HasValue)
+                    {
+                        _shapeManager.StartResize(resizeHandle.Value, currentPoint);
+                        UpdateStatusBar();
+                        return;
+                    }
+
+                    var shape = _shapeManager.GetShapeAtPoint(currentPoint);
+                    if (shape != null)
+                    {
+                        _shapeManager.SelectShape(shape);
+                        _shapeManager.StartDrag(currentPoint);
+                    }
+                    else
+                    {
+                        _shapeManager.ClearSelection();
+                    }
+                    UpdateStatusBar();
+                }
+            }
+        }
 
         // Режим рисования (обычные фигуры)
         private void HandleDrawModeMouseDown(Point currentPoint, MouseButtonEventArgs e)
@@ -346,10 +339,6 @@ namespace paint
                 UpdatePropertiesFromUI();
                 _startPoint = currentPoint;
                 _isDrawing = true;
-
-                // ВАЖНО: Сохраняем состояние ПЕРЕД началом рисования
-                System.Diagnostics.Debug.WriteLine("=== SAVE STATE BEFORE START DRAWING ===");
-                _undoManager.SaveState(DrawCanvas, $"Before Start Draw {_currentShape}");
 
                 _previewShape = CreateShape(_currentShape);
                 if (_previewShape != null)
@@ -378,10 +367,6 @@ namespace paint
 
                 if (_polygonState == PolygonState.NotStarted)
                 {
-                    // ВАЖНО: Сохраняем состояние ПЕРЕД началом рисования многоугольника
-                    System.Diagnostics.Debug.WriteLine("=== SAVE STATE BEFORE START POLYGON ===");
-                    _undoManager.SaveState(DrawCanvas, "Before Start Polygon");
-
                     _polygonPoints.Clear();
                     _polygonPoints.Add(currentPoint);
                     _polygonState = PolygonState.Drawing;
@@ -484,13 +469,12 @@ namespace paint
 
                 UpdateShapeGeometry(_previewShape, _startPoint, end, _currentShape);
 
-                // Добавляем фигуру в менеджер
-                _shapeManager.AddShape(_previewShape);
+                // Используем команду для добавления фигуры
+                var command = new AddShapeCommand(DrawCanvas, _previewShape, _shapeManager);
+                UndoRedoManager.Instance.Execute(command);
 
-                // ВАЖНО: Сохраняем состояние ПОСЛЕ добавления фигуры
-                System.Diagnostics.Debug.WriteLine("=== SAVE STATE AFTER DRAWING ===");
-                _undoManager.SaveState(DrawCanvas, $"After Draw {_currentShape}");
-
+                // Удаляем preview фигуру с холста
+                DrawCanvas.Children.Remove(_previewShape);
                 _previewShape = null;
                 UpdateStatusBar();
             }
@@ -511,18 +495,14 @@ namespace paint
                     _polygonPreview = null;
                 }
 
-                DrawCanvas.Children.Add(finalPolygon);
-                _shapeManager?.AddShape(finalPolygon);
-
-                // ВАЖНО: Сохраняем состояние ПОСЛЕ добавления фигуры
-                System.Diagnostics.Debug.WriteLine("=== SAVE STATE AFTER COMPLETING POLYGON ===");
-                _undoManager.SaveState(DrawCanvas, "After Complete Polygon");
+                // Используем команду для добавления фигуры
+                var command = new AddShapeCommand(DrawCanvas, finalPolygon, _shapeManager);
+                UndoRedoManager.Instance.Execute(command);
 
                 UpdateStatusBar();
             }
             else
             {
-                // Если точек недостаточно, просто отменяем рисование
                 MessageBox.Show("Для многоугольника нужно как минимум 3 точки", "Недостаточно точек",
                                MessageBoxButton.OK, MessageBoxImage.Warning);
             }
@@ -621,10 +601,11 @@ namespace paint
             string selectionText = _shapeManager?.SelectedShape != null ? " | Фигура выделена" : string.Empty;
             string zoomText = _zoomManager != null ? $" | Масштаб: {_zoomManager.GetZoomText()}" : string.Empty;
             string polygonText = _polygonState == PolygonState.Drawing ? $" | Точки: {_polygonPoints.Count}" : "";
+            string undoText = $" | Отмена: {UndoRedoManager.Instance.CanUndo}, Повтор: {UndoRedoManager.Instance.CanRedo}";
 
             if (StatusText != null)
             {
-                StatusText.Text = $"{modeText}{shapeText}{selectionText}{zoomText}{polygonText}";
+                StatusText.Text = $"{modeText}{shapeText}{selectionText}{zoomText}{polygonText}{undoText}";
             }
         }
 
@@ -643,8 +624,7 @@ namespace paint
                 UpdateStatusBar();
                 UpdateWindowTitle();
 
-                // Сохраняем начальное состояние
-                _undoManager.SaveState(DrawCanvas, "New Project");
+                UndoRedoManager.Instance.Clear();
             }
         }
 
@@ -749,9 +729,6 @@ namespace paint
         {
             try
             {
-                // Сохраняем состояние перед загрузкой
-                _undoManager.SaveState(DrawCanvas, "Before Load Project");
-
                 var project = LoadProjectFromFile(filename);
 
                 DrawCanvas.Children.Clear();
@@ -770,6 +747,8 @@ namespace paint
                 _shapeManager = new ShapeManager(DrawCanvas);
                 UpdateStatusBar();
                 UpdateWindowTitle();
+
+                UndoRedoManager.Instance.Clear();
 
                 MessageBox.Show($"Проект успешно загружен!\n{filename}",
                               "Загрузка завершена", MessageBoxButton.OK, MessageBoxImage.Information);

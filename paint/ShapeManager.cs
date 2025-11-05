@@ -7,7 +7,6 @@ using System.Windows.Shapes;
 
 namespace paint
 {
-    // Управление фигурами на холсте
     public class ShapeManager
     {
         private Canvas _canvas;
@@ -23,9 +22,6 @@ namespace paint
         // Для хранения оригинальных координат Line и Polygon
         private double _originalX1, _originalY1, _originalX2, _originalY2;
         private PointCollection _originalPolygonPoints;
-
-        // Событие для уведомления об изменении фигур
-        public event Action? ShapeModified;
 
         public ShapeManager(Canvas canvas)
         {
@@ -121,7 +117,6 @@ namespace paint
         public void EndDrag()
         {
             _isDragging = false;
-            ShapeModified?.Invoke(); // Уведомляем об изменении
         }
 
         // Начинает изменение размера фигуры
@@ -237,7 +232,12 @@ namespace paint
         {
             _isResizing = false;
             _originalPolygonPoints = null;
-            ShapeModified?.Invoke(); // Уведомляем об изменении
+        }
+
+        // Обновляет маркеры выделения
+        public void UpdateSelectionMarkers()
+        {
+            UpdateResizeHandlesPosition();
         }
 
         // Находит центр полигона
