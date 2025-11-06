@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
 
@@ -24,6 +25,9 @@ namespace paint
         // Для хранения исходных значений при изменении размера
         private double _originalX1, _originalY1, _originalX2, _originalY2;
         private PointCollection _originalPolygonPoints;
+
+        // Событие для уведомления об изменении выделения
+        public event Action<Shape?>? SelectionChanged;
 
         public ShapeManager(Canvas canvas)
         {
@@ -51,6 +55,7 @@ namespace paint
             }
 
             ShowSelectionMarkers();
+            SelectionChanged?.Invoke(_selectedShape);
         }
 
         // Снимает выделение с фигуры
@@ -58,6 +63,7 @@ namespace paint
         {
             HideSelectionMarkers();
             _selectedShape = null;
+            SelectionChanged?.Invoke(null);
         }
 
         // Удаляет выделенную фигуру
@@ -145,6 +151,14 @@ namespace paint
                 {
                     _originalPolygonPoints = new PointCollection(polygon.Points);
                 }
+                else
+                {
+                    // Для обычных фигур сохраняем текущие размеры
+                    _originalX1 = Canvas.GetLeft(_selectedShape);
+                    _originalY1 = Canvas.GetTop(_selectedShape);
+                    _originalX2 = _originalX1 + _selectedShape.Width;
+                    _originalY2 = _originalY1 + _selectedShape.Height;
+                }
             }
         }
 
@@ -181,10 +195,36 @@ namespace paint
                 }
                 else if (_selectedShape is Polygon polygon && _originalPolygonPoints != null)
                 {
-                    // Масштабирование многоугольника
+                    // Масштабирование многоугольника относительно центра
                     Point center = GetPolygonCenter(_originalPolygonPoints);
-                    double scaleX = 1.0 + deltaX / 100;
-                    double scaleY = 1.0 + deltaY / 100;
+
+                    // Вычисляем коэффициенты масштабирования
+                    double scaleX = 1.0;
+                    double scaleY = 1.0;
+
+                    switch (_activeResizeHandle)
+                    {
+                        case ResizeHandle.TopLeft:
+                            scaleX = 1.0 - deltaX / 100;
+                            scaleY = 1.0 - deltaY / 100;
+                            break;
+                        case ResizeHandle.TopRight:
+                            scaleX = 1.0 + deltaX / 100;
+                            scaleY = 1.0 - deltaY / 100;
+                            break;
+                        case ResizeHandle.BottomLeft:
+                            scaleX = 1.0 - deltaX / 100;
+                            scaleY = 1.0 + deltaY / 100;
+                            break;
+                        case ResizeHandle.BottomRight:
+                            scaleX = 1.0 + deltaX / 100;
+                            scaleY = 1.0 + deltaY / 100;
+                            break;
+                    }
+
+                    // Ограничиваем минимальный размер
+                    scaleX = Math.Max(0.1, scaleX);
+                    scaleY = Math.Max(0.1, scaleY);
 
                     PointCollection newPoints = new PointCollection();
                     foreach (Point point in _originalPolygonPoints)
@@ -206,24 +246,43 @@ namespace paint
                     switch (_activeResizeHandle)
                     {
                         case ResizeHandle.TopLeft:
-                            Canvas.SetLeft(_selectedShape, left + deltaX);
-                            Canvas.SetTop(_selectedShape, top + deltaY);
-                            _selectedShape.Width = Math.Max(10, width - deltaX);
-                            _selectedShape.Height = Math.Max(10, height - deltaY);
+                            double newLeft = Math.Min(left + deltaX, left + width - 10);
+                            double newTop = Math.Min(top + deltaY, top + height - 10);
+                            double newWidth = Math.Max(10, width - deltaX);
+                            double newHeight = Math.Max(10, height - deltaY);
+
+                            Canvas.SetLeft(_selectedShape, newLeft);
+                            Canvas.SetTop(_selectedShape, newTop);
+                            _selectedShape.Width = newWidth;
+                            _selectedShape.Height = newHeight;
                             break;
+
                         case ResizeHandle.TopRight:
-                            Canvas.SetTop(_selectedShape, top + deltaY);
-                            _selectedShape.Width = Math.Max(10, width + deltaX);
-                            _selectedShape.Height = Math.Max(10, height - deltaY);
+                            newTop = Math.Min(top + deltaY, top + height - 10);
+                            newWidth = Math.Max(10, width + deltaX);
+                            newHeight = Math.Max(10, height - deltaY);
+
+                            Canvas.SetTop(_selectedShape, newTop);
+                            _selectedShape.Width = newWidth;
+                            _selectedShape.Height = newHeight;
                             break;
+
                         case ResizeHandle.BottomLeft:
-                            Canvas.SetLeft(_selectedShape, left + deltaX);
-                            _selectedShape.Width = Math.Max(10, width - deltaX);
-                            _selectedShape.Height = Math.Max(10, height + deltaY);
+                            newLeft = Math.Min(left + deltaX, left + width - 10);
+                            newWidth = Math.Max(10, width - deltaX);
+                            newHeight = Math.Max(10, height + deltaY);
+
+                            Canvas.SetLeft(_selectedShape, newLeft);
+                            _selectedShape.Width = newWidth;
+                            _selectedShape.Height = newHeight;
                             break;
+
                         case ResizeHandle.BottomRight:
-                            _selectedShape.Width = Math.Max(10, width + deltaX);
-                            _selectedShape.Height = Math.Max(10, height + deltaY);
+                            newWidth = Math.Max(10, width + deltaX);
+                            newHeight = Math.Max(10, height + deltaY);
+
+                            _selectedShape.Width = newWidth;
+                            _selectedShape.Height = newHeight;
                             break;
                     }
                 }
@@ -249,6 +308,9 @@ namespace paint
         // Находит центр многоугольника
         private Point GetPolygonCenter(PointCollection points)
         {
+            if (points == null || points.Count == 0)
+                return new Point(0, 0);
+
             double sumX = 0, sumY = 0;
             foreach (Point point in points)
             {
@@ -287,6 +349,11 @@ namespace paint
             // Для прямоугольников и эллипсов
             double left = Canvas.GetLeft(shape);
             double top = Canvas.GetTop(shape);
+
+            // Если позиция не установлена, считаем что фигура в (0,0)
+            if (double.IsNaN(left)) left = 0;
+            if (double.IsNaN(top)) top = 0;
+
             Rect rect = new Rect(left, top, shape.Width, shape.Height);
             return rect.Contains(point);
         }
@@ -295,10 +362,13 @@ namespace paint
         private bool IsPointInPolygon(Point point, Polygon polygon)
         {
             PointCollection points = polygon.Points;
+            if (points == null || points.Count < 3)
+                return false;
+
             int count = points.Count;
             bool inside = false;
 
-            // Алгоритм проверки точки в многоугольнике
+            // Алгоритм проверки точки в многоугольнике (ray casting)
             for (int i = 0, j = count - 1; i < count; j = i++)
             {
                 if (((points[i].Y > point.Y) != (points[j].Y > point.Y)) &&
@@ -327,6 +397,31 @@ namespace paint
             return null;
         }
 
+        // Получает границы фигуры
+        public Rect GetShapeBounds(Shape shape)
+        {
+            if (shape is Line line)
+            {
+                double minX = Math.Min(line.X1, line.X2);
+                double minY = Math.Min(line.Y1, line.Y2);
+                double maxX = Math.Max(line.X1, line.X2);
+                double maxY = Math.Max(line.Y1, line.Y2);
+                return new Rect(minX, minY, maxX - minX, maxY - minY);
+            }
+            else if (shape is Polygon polygon)
+            {
+                return GetPolygonBounds(polygon);
+            }
+            else
+            {
+                double left = Canvas.GetLeft(shape);
+                double top = Canvas.GetTop(shape);
+                if (double.IsNaN(left)) left = 0;
+                if (double.IsNaN(top)) top = 0;
+                return new Rect(left, top, shape.Width, shape.Height);
+            }
+        }
+
         // Свойства для отслеживания состояния
         public bool IsDragging => _isDragging;
         public bool IsResizing => _isResizing;
@@ -344,7 +439,8 @@ namespace paint
                     Fill = Brushes.White,
                     Stroke = Brushes.Black,
                     StrokeThickness = 1,
-                    Visibility = Visibility.Collapsed
+                    Visibility = Visibility.Collapsed,
+                    Cursor = Cursors.SizeAll
                 };
                 _resizeHandles[handle] = rect;
                 _canvas.Children.Add(rect);
@@ -376,41 +472,32 @@ namespace paint
         {
             if (_selectedShape == null) return;
 
-            if (_selectedShape is Line line)
+            Rect bounds = GetShapeBounds(_selectedShape);
+
+            // Для линии используем только два маркера
+            if (_selectedShape is Line)
             {
-                // Для линии используем только два маркера
-                SetResizeHandlePosition(ResizeHandle.TopLeft, line.X1 - ResizeHandleSize / 2, line.Y1 - ResizeHandleSize / 2);
-                SetResizeHandlePosition(ResizeHandle.TopRight, line.X2 - ResizeHandleSize / 2, line.Y2 - ResizeHandleSize / 2);
+                SetResizeHandlePosition(ResizeHandle.TopLeft, bounds.Left - ResizeHandleSize / 2, bounds.Top - ResizeHandleSize / 2);
+                SetResizeHandlePosition(ResizeHandle.TopRight, bounds.Right - ResizeHandleSize / 2, bounds.Bottom - ResizeHandleSize / 2);
                 SetResizeHandlePosition(ResizeHandle.BottomLeft, -100, -100); // Скрываем
                 SetResizeHandlePosition(ResizeHandle.BottomRight, -100, -100); // Скрываем
             }
-            else if (_selectedShape is Polygon polygon)
+            else
             {
-                // Для многоугольника вычисляем ограничивающий прямоугольник
-                Rect bounds = GetPolygonBounds(polygon);
+                // Для всех остальных фигур - 4 маркера
                 SetResizeHandlePosition(ResizeHandle.TopLeft, bounds.Left - ResizeHandleSize / 2, bounds.Top - ResizeHandleSize / 2);
                 SetResizeHandlePosition(ResizeHandle.TopRight, bounds.Right - ResizeHandleSize / 2, bounds.Top - ResizeHandleSize / 2);
                 SetResizeHandlePosition(ResizeHandle.BottomLeft, bounds.Left - ResizeHandleSize / 2, bounds.Bottom - ResizeHandleSize / 2);
                 SetResizeHandlePosition(ResizeHandle.BottomRight, bounds.Right - ResizeHandleSize / 2, bounds.Bottom - ResizeHandleSize / 2);
-            }
-            else
-            {
-                // Для обычных фигур
-                double left = Canvas.GetLeft(_selectedShape);
-                double top = Canvas.GetTop(_selectedShape);
-                double width = _selectedShape.Width;
-                double height = _selectedShape.Height;
-
-                SetResizeHandlePosition(ResizeHandle.TopLeft, left - ResizeHandleSize / 2, top - ResizeHandleSize / 2);
-                SetResizeHandlePosition(ResizeHandle.TopRight, left + width - ResizeHandleSize / 2, top - ResizeHandleSize / 2);
-                SetResizeHandlePosition(ResizeHandle.BottomLeft, left - ResizeHandleSize / 2, top + height - ResizeHandleSize / 2);
-                SetResizeHandlePosition(ResizeHandle.BottomRight, left + width - ResizeHandleSize / 2, top + height - ResizeHandleSize / 2);
             }
         }
 
         // Вычисляет ограничивающий прямоугольник для многоугольника
         private Rect GetPolygonBounds(Polygon polygon)
         {
+            if (polygon.Points == null || polygon.Points.Count == 0)
+                return new Rect(0, 0, 0, 0);
+
             double minX = double.MaxValue, minY = double.MaxValue;
             double maxX = double.MinValue, maxY = double.MinValue;
 

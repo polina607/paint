@@ -123,14 +123,28 @@ namespace paint
 
         private void StrokeColorBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            UpdatePropertiesFromUI();
-            UpdateSelectedShapeProperties();
+            // Обновляем свойства только если есть выделенная фигура
+            if (_shapeManager?.SelectedShape != null)
+            {
+                UpdateSelectedShapeProperties();
+            }
+            else
+            {
+                UpdatePropertiesFromUI();
+            }
         }
 
         private void FillColorBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            UpdatePropertiesFromUI();
-            UpdateSelectedShapeProperties();
+            // Обновляем свойства только если есть выделенная фигура
+            if (_shapeManager?.SelectedShape != null)
+            {
+                UpdateSelectedShapeProperties();
+            }
+            else
+            {
+                UpdatePropertiesFromUI();
+            }
         }
 
         // Обновление свойств выделенной фигуры
@@ -139,10 +153,23 @@ namespace paint
             if (_shapeManager?.SelectedShape != null)
             {
                 var oldProperties = GetShapeProperties(_shapeManager.SelectedShape);
-                ShapeFactory.ApplyProperties(_shapeManager.SelectedShape, _currentProperties);
 
-                var command = new ChangePropertiesCommand(_shapeManager.SelectedShape, oldProperties, _currentProperties, _shapeManager);
+                // Создаем новые свойства из текущих значений UI
+                var newProperties = new ShapeProperties
+                {
+                    Stroke = GetSelectedStrokeBrush(),
+                    Fill = GetSelectedFillBrush(),
+                    StrokeThickness = _currentProperties.StrokeThickness,
+                    HasFill = (FillColorBox.SelectedItem as ComboBoxItem)?.Tag as string != "Transparent"
+                };
+
+                ShapeFactory.ApplyProperties(_shapeManager.SelectedShape, newProperties);
+
+                var command = new ChangePropertiesCommand(_shapeManager.SelectedShape, oldProperties, newProperties, _shapeManager);
                 UndoRedoManager.Instance.Execute(command);
+
+                // Обновляем текущие свойства
+                _currentProperties = newProperties;
             }
         }
 
@@ -326,10 +353,14 @@ namespace paint
                 {
                     _shapeManager.SelectShape(shape);
                     _shapeManager.StartDrag(currentPoint);
+                    // Обновляем UI свойствами выделенной фигуры
+                    UpdateUIWithSelectedShapeProperties();
                 }
                 else
                 {
                     _shapeManager.ClearSelection();
+                    // Сбрасываем UI к настройкам по умолчанию
+                    UpdatePropertiesFromUI();
                 }
                 UpdateStatusBar();
             }
@@ -818,6 +849,92 @@ namespace paint
         private bool IsResizeHandle(Shape shape)
         {
             return shape is Rectangle rect && rect.Width == 8 && rect.Height == 8;
+        }
+
+        // Обновляет UI свойствами выделенной фигуры
+        private void UpdateUIWithSelectedShapeProperties()
+        {
+            if (_shapeManager?.SelectedShape == null)
+            {
+                // Если нет выделенной фигуры, используем текущие настройки
+                UpdatePropertiesFromUI();
+                return;
+            }
+
+            // Получаем свойства выделенной фигуры
+            var shapeProperties = GetShapeProperties(_shapeManager.SelectedShape);
+
+            // Обновляем UI в соответствии со свойствами фигуры
+            UpdateColorBoxesFromProperties(shapeProperties);
+
+            // Обновляем текущие свойства
+            _currentProperties = shapeProperties;
+        }
+
+        // Обновляет комбобоксы цветов на основе свойств фигуры
+        private void UpdateColorBoxesFromProperties(ShapeProperties properties)
+        {
+            if (StrokeColorBox == null || FillColorBox == null) return;
+
+            // Временно отключаем обработчики событий чтобы избежать рекурсии
+            StrokeColorBox.SelectionChanged -= StrokeColorBox_SelectionChanged;
+            FillColorBox.SelectionChanged -= FillColorBox_SelectionChanged;
+
+            try
+            {
+                // Обновляем комбобокс контура
+                string strokeColorName = GetColorNameFromBrush(properties.Stroke);
+                foreach (ComboBoxItem item in StrokeColorBox.Items)
+                {
+                    if (item.Tag as string == strokeColorName)
+                    {
+                        StrokeColorBox.SelectedItem = item;
+                        break;
+                    }
+                }
+
+                // Обновляем комбобокс заливки
+                string fillColorName = properties.HasFill ? GetColorNameFromBrush(properties.Fill) : "Transparent";
+                foreach (ComboBoxItem item in FillColorBox.Items)
+                {
+                    if (item.Tag as string == fillColorName)
+                    {
+                        FillColorBox.SelectedItem = item;
+                        break;
+                    }
+                }
+            }
+            finally
+            {
+                // Восстанавливаем обработчики событий
+                StrokeColorBox.SelectionChanged += StrokeColorBox_SelectionChanged;
+                FillColorBox.SelectionChanged += FillColorBox_SelectionChanged;
+            }
+        }
+
+        // Получает имя цвета из кисти
+        private string GetColorNameFromBrush(Brush brush)
+        {
+            if (brush is SolidColorBrush solidBrush)
+            {
+                return solidBrush.Color.ToString() switch
+                {
+                    "#FFFF0000" => "Red",
+                    "#FF008000" => "Green",
+                    "#FF0000FF" => "Blue",
+                    "#FFFFFF00" => "Yellow",
+                    "#FF800080" => "Purple",
+                    _ => "Black"
+                };
+            }
+            return "Black";
+        }
+
+        // Обработчик изменения размера окна
+        private void Window_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            // Можно добавить адаптацию интерфейса при изменении размера окна
+            UpdateStatusBar();
         }
     }
 }

@@ -1,0 +1,50 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<PaintProject CanvasWidth="2000" CanvasHeight="2000">
+  <Shape Type="Line" StrokeColor="#FF000000" FillColor="#00FFFFFF" StrokeThickness="2" HasFill="False">
+    <X1>176,8</X1>
+    <Y1>76,24000000000001</Y1>
+    <X2>368</X2>
+    <Y2>145,84</Y2>
+  </Shape>
+  <Shape Type="Line" StrokeColor="#FF000000" FillColor="#00FFFFFF" StrokeThickness="2" HasFill="False">
+    <X1>458,40000000000003</X1>
+    <Y1>101,03999999999999</Y1>
+    <X2>355,20000000000005</X2>
+    <Y2>354,64000000000004</Y2>
+  </Shape>
+  <Shape Type="Rectangle" StrokeColor="#FF000000" FillColor="#FFFF0000" StrokeThickness="2" HasFill="True">
+    <Left>572,8000000000001</Left>
+    <Top>162,64000000000001</Top>
+    <Width>182,39999999999998</Width>
+    <Height>80</Height>
+  </Shape>
+  <Shape Type="Rectangle" StrokeColor="#FF008000" FillColor="#FFFF0000" StrokeThickness="2" HasFill="True">
+    <Left>55,2</Left>
+    <Top>145,84</Top>
+    <Width>152,00000000000003</Width>
+    <Height>152,00000000000003</Height>
+  </Shape>
+  <Shape Type="Ellipse" StrokeColor="#FF000000" FillColor="#FFFF0000" StrokeThickness="2" HasFill="True">
+    <Left>414,40000000000003</Left>
+    <Top>289,84000000000003</Top>
+    <Width>230,40000000000003</Width>
+    <Height>133,60000000000002</Height>
+  </Shape>
+  <Shape Type="Ellipse" StrokeColor="#FF000000" FillColor="#FFFF0000" StrokeThickness="2" HasFill="True">
+    <Left>120</Left>
+    <Top>309,84000000000003</Top>
+    <Width>120,80000000000001</Width>
+    <Height>120,80000000000001</Height>
+  </Shape>
+  <Shape Type="Polygon" StrokeColor="#FF0000FF" FillColor="#FFFFFF00" StrokeThickness="2" HasFill="True">
+    <Points>
+      <Point X="100,80000000000001" Y="81,84" />
+      <Point X="682,4000000000001" Y="43,440000000000005" />
+      <Point X="668" Y="238,64000000000001" />
+      <Point X="436,8" Y="348,24000000000007" />
+      <Point X="378,40000000000003" Y="493,8400000000001" />
+      <Point X="248,8" Y="345,84000000000003" />
+      <Point X="360,8" Y="248,24000000000004" />
+    </Points>
+  </Shape>
+</PaintProject>
